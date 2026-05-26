@@ -32,6 +32,10 @@
           <span class="dot"></span>
           {{ statusText }}
         </span>
+        <div class="step-divider"></div>
+        <button v-if="projectData?.project_id" class="survey-link-btn" @click="goToSurveyResults">
+          📊 Hasil Survei
+        </button>
       </div>
     </header>
 
@@ -291,6 +295,12 @@ const loadGraph = async (graphId) => {
   }
 }
 
+const goToSurveyResults = () => {
+  if (projectData.value?.project_id) {
+    router.push({ name: 'SurveyResults', query: { project: projectData.value.project_id } })
+  }
+}
+
 const refreshGraph = () => {
   if (projectData.value?.graph_id) {
     loadGraph(projectData.value.graph_id)
@@ -449,6 +459,22 @@ onMounted(() => {
 
 .panel-wrapper.left {
   border-right: 1px solid #EAEAEA;
+}
+
+.survey-link-btn {
+  padding: 6px 14px;
+  background: #1F2937;
+  color: #FFF;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.survey-link-btn:hover {
+  background: #374151;
 }
 
 /* Retry container */

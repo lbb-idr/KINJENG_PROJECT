@@ -146,10 +146,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import NavBar from '../components/NavBar.vue'
 
+const route = useRoute()
+const router = useRouter()
 const API = 'http://localhost:5001/api'
 
 const selectedProject = ref('')
@@ -171,7 +174,24 @@ const alphaClass = computed(() => {
   return 'alpha-bad'
 })
 
-onMounted(refreshProjects)
+onMounted(async () => {
+  await refreshProjects()
+  // Auto-select project dari query param
+  const projectFromQuery = route.query.project
+  if (projectFromQuery && projects.value.includes(projectFromQuery)) {
+    selectedProject.value = projectFromQuery
+    loadResults()
+  } else if (projectFromQuery) {
+    // Project belum di-load, tunggu dan coba lagi
+    selectedProject.value = projectFromQuery
+    const unwatch = watch(projects, (vals) => {
+      if (vals.includes(projectFromQuery)) {
+        loadResults()
+        unwatch()
+      }
+    })
+  }
+})
 
 async function refreshProjects() {
   try {
