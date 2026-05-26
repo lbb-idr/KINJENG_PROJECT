@@ -4,12 +4,13 @@ Step2: Zep实体读取与过滤、OASIS模拟准备与运行（全程自动化�
 """
 
 import os
+import time
 import traceback
 from flask import request, jsonify, send_file
 
 from . import simulation_bp
 from ..config import Config
-from ..services.zep_entity_reader import ZepEntityReader
+from ..services.zep_entity_reader import ZepEntityReader, create_entity_reader
 from ..services.oasis_profile_generator import OasisProfileGenerator
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
@@ -69,7 +70,7 @@ def get_graph_entities(graph_id: str):
         
         logger.info(f"获取图谱实体: graph_id={graph_id}, entity_types={entity_types}, enrich={enrich}")
         
-        reader = ZepEntityReader()
+        reader = create_entity_reader(graph_id)
         result = reader.filter_defined_entities(
             graph_id=graph_id,
             defined_entity_types=entity_types,
@@ -472,7 +473,7 @@ def prepare_simulation():
         # 这样前端在调用prepare后立即就能获取到预期Agent总数
         try:
             logger.info(f"同步获取实体数量: graph_id={state.graph_id}")
-            reader = ZepEntityReader()
+            reader = create_entity_reader(state.graph_id)
             # 快速读取实体（不需要边信息，只统计数量）
             filtered_preview = reader.filter_defined_entities(
                 graph_id=state.graph_id,
@@ -1401,7 +1402,7 @@ def generate_profiles():
         use_llm = data.get('use_llm', True)
         platform = data.get('platform', 'reddit')
         
-        reader = ZepEntityReader()
+        reader = create_entity_reader(graph_id)
         filtered = reader.filter_defined_entities(
             graph_id=graph_id,
             defined_entity_types=entity_types,
@@ -1698,6 +1699,29 @@ def stop_simulation():
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
+
+
+# ============== Heartbeat / Disconnect ==============
+
+@simulation_bp.route('/heartbeat/<simulation_id>', methods=['POST'])
+def heartbeat(simulation_id: str):
+    """Terima ping dari frontend — catat last_heartbeat"""
+    SimulationRunner._last_heartbeat[simulation_id] = time.time()
+    return jsonify({"success": True, "time": time.time()})
+
+
+@simulation_bp.route('/disconnect/<simulation_id>', methods=['POST'])
+def disconnect(simulation_id: str):
+    """Frontend disconnect (tab ditutup) — stop sim langsung"""
+    try:
+        SimulationRunner.stop_simulation(simulation_id)
+    except (ValueError, Exception):
+        pass
+    SimulationRunner._last_heartbeat.pop(simulation_id, None)
+    SimulationRunner._run_states.pop(simulation_id, None)
+    SimulationRunner._processes.pop(simulation_id, None)
+    logger.info(f"Client disconnected, simulation stopped: {simulation_id}")
+    return jsonify({"success": True})
 
 
 # ============== 实时状态监控接口 ==============

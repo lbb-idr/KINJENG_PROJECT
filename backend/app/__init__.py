@@ -45,12 +45,20 @@ def create_app(config_class=Config):
     # 注册模拟进程清理函数（确保服务器关闭时终止所有模拟进程）
     from .services.simulation_runner import SimulationRunner
     SimulationRunner.register_cleanup()
+    SimulationRunner.start_cleanup_thread()
     if should_log_startup:
-        logger.info("已注册模拟进程清理函数")
+        logger.info("已注册模拟进程清理函数 + heartbeat cleanup thread")
     
-    # 请求日志中间件
+    # Idle shutdown: backend mati otomatis 5 menit setelah aktivitas terakhir
+    from .api.system import touch, start_idle_shutdown
+    start_idle_shutdown()
+    if should_log_startup:
+        logger.info("Idle shutdown monitor started (5 min timeout)")
+    
+    # 请求日志 + aktivitas tracker
     @app.before_request
-    def log_request():
+    def before_request():
+        touch()
         logger = get_logger('mirofish.request')
         logger.debug(f"请求: {request.method} {request.path}")
         if request.content_type and 'json' in request.content_type:
@@ -63,10 +71,13 @@ def create_app(config_class=Config):
         return response
     
     # 注册蓝图
-    from .api import graph_bp, simulation_bp, report_bp
+    from .api import graph_bp, simulation_bp, report_bp, survey_bp, cognitive_bp, system_bp
     app.register_blueprint(graph_bp, url_prefix='/api/graph')
     app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
     app.register_blueprint(report_bp, url_prefix='/api/report')
+    app.register_blueprint(survey_bp, url_prefix='/api/survey')
+    app.register_blueprint(cognitive_bp, url_prefix='/api/cognitive')
+    app.register_blueprint(system_bp, url_prefix='/api/system')
     
     # 健康检查
     @app.route('/health')

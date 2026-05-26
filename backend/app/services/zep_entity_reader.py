@@ -19,6 +19,21 @@ logger = get_logger('mirofish.zep_entity_reader')
 T = TypeVar('T')
 
 
+def create_entity_reader(graph_id: str):
+    """Factory: returns ZepEntityReader with pre-loaded data for local mode."""
+    from .graph_builder import _get_graph_mode
+    mode = _get_graph_mode()
+    if mode == 'local':
+        from .local_graph_store import LocalGraphStore
+        store = LocalGraphStore()
+        data = store.get_graph_data(graph_id)
+        return ZepEntityReader(
+            nodes_data=data.get('nodes', []),
+            edges_data=data.get('edges', [])
+        )
+    return ZepEntityReader()
+
+
 @dataclass
 class EntityNode:
     """实体节点数据结构"""
@@ -76,14 +91,22 @@ class ZepEntityReader:
     1. 从Zep图谱读取所有节点
     2. 筛选出符合预定义实体类型的节点（Labels不只是Entity的节点）
     3. 获取每个实体的相关边和关联节点信息
+    
+    Support both Zep API and pre-loaded graph data (local mode).
     """
     
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or Config.ZEP_API_KEY
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY 未配置")
+    def __init__(self, api_key: Optional[str] = None, nodes_data: Optional[List[Dict]] = None, edges_data: Optional[List[Dict]] = None):
+        self._nodes_data = nodes_data
+        self._edges_data = edges_data
         
-        self.client = Zep(api_key=self.api_key)
+        if nodes_data is not None:
+            self.client = None
+            self.api_key = None
+        else:
+            self.api_key = api_key or Config.ZEP_API_KEY
+            if not self.api_key:
+                raise ValueError("ZEP_API_KEY 未配置")
+            self.client = Zep(api_key=self.api_key)
     
     def _call_with_retry(
         self, 
@@ -125,15 +148,9 @@ class ZepEntityReader:
         raise last_exception
     
     def get_all_nodes(self, graph_id: str) -> List[Dict[str, Any]]:
-        """
-        获取图谱的所有节点（分页获取）
+        if self._nodes_data is not None:
+            return self._nodes_data
 
-        Args:
-            graph_id: 图谱ID
-
-        Returns:
-            节点列表
-        """
         logger.info(f"获取图谱 {graph_id} 的所有节点...")
 
         nodes = fetch_all_nodes(self.client, graph_id)
@@ -152,15 +169,9 @@ class ZepEntityReader:
         return nodes_data
 
     def get_all_edges(self, graph_id: str) -> List[Dict[str, Any]]:
-        """
-        获取图谱的所有边（分页获取）
+        if self._edges_data is not None:
+            return self._edges_data
 
-        Args:
-            graph_id: 图谱ID
-
-        Returns:
-            边列表
-        """
         logger.info(f"获取图谱 {graph_id} 的所有边...")
 
         edges = fetch_all_edges(self.client, graph_id)
@@ -180,17 +191,13 @@ class ZepEntityReader:
         return edges_data
     
     def get_node_edges(self, node_uuid: str) -> List[Dict[str, Any]]:
-        """
-        获取指定节点的所有相关边（带重试机制）
-        
-        Args:
-            node_uuid: 节点UUID
-            
-        Returns:
-            边列表
-        """
+        if self._edges_data is not None:
+            return [
+                e for e in self._edges_data
+                if e.get("source_node_uuid") == node_uuid or e.get("target_node_uuid") == node_uuid
+            ]
+
         try:
-            # 使用重试机制调用Zep API
             edges = self._call_with_retry(
                 func=lambda: self.client.graph.node.get_entity_edges(node_uuid=node_uuid),
                 operation_name=f"获取节点边(node={node_uuid[:8]}...)"

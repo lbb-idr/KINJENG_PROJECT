@@ -227,6 +227,11 @@ class SimulationRunner:
     # 图谱记忆更新配置
     _graph_memory_enabled: Dict[str, bool] = {}  # simulation_id -> enabled
     
+    # Heartbeat tracking
+    _last_heartbeat: Dict[str, float] = {}  # simulation_id -> timestamp
+    _cleanup_thread: Optional[threading.Thread] = None
+    _stop_cleanup = False
+    
     @classmethod
     def get_run_state(cls, simulation_id: str) -> Optional[SimulationRunState]:
         """获取运行状态"""
@@ -1284,6 +1289,44 @@ class SimulationRunner:
         
         logger.info("模拟进程清理完成")
     
+    @classmethod
+    @classmethod
+    def start_cleanup_thread(cls):
+        """Start background thread to stop stale simulations (no heartbeat >5min)"""
+        if cls._cleanup_thread and cls._cleanup_thread.is_alive():
+            return
+        cls._stop_cleanup = False
+        cls._cleanup_thread = threading.Thread(target=cls._cleanup_loop, daemon=True, name='heartbeat-cleanup')
+        cls._cleanup_thread.start()
+        logger.info("Heartbeat cleanup thread started")
+
+    @classmethod
+    def stop_cleanup_thread(cls):
+        cls._stop_cleanup = True
+
+    @classmethod
+    def _cleanup_loop(cls):
+        while not cls._stop_cleanup:
+            try:
+                now = time.time()
+                stale = [
+                    sim_id for sim_id, ts in list(cls._last_heartbeat.items())
+                    if now - ts > 300  # 5 menit tanpa heartbeat
+                ]
+                for sim_id in stale:
+                    logger.warning(f"Auto-stopping stale simulation (no heartbeat): {sim_id}")
+                    try:
+                        cls.stop_simulation(sim_id)
+                    except Exception as e:
+                        logger.error(f"Failed to auto-stop stale simulation {sim_id}: {e}")
+                    finally:
+                        cls._last_heartbeat.pop(sim_id, None)
+                        cls._run_states.pop(sim_id, None)
+                        cls._processes.pop(sim_id, None)
+            except Exception as e:
+                logger.error(f"Cleanup loop error: {e}")
+            time.sleep(60)
+
     @classmethod
     def register_cleanup(cls):
         """

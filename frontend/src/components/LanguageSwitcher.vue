@@ -21,9 +21,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { availableLocales } from '@/i18n/index.js'
+import { availableLocales } from '../i18n/index.js'
 
-const { locale } = useI18n()
+const { locale } = useI18n({ useScope: 'global' })
 const open = ref(false)
 const switcherRef = ref(null)
 
@@ -32,93 +32,61 @@ const currentLabel = computed(() => {
   return found ? found.label : locale.value
 })
 
-const toggleDropdown = () => {
-  open.value = !open.value
-}
-
+const toggleDropdown = () => { open.value = !open.value }
 const switchLocale = (key) => {
   locale.value = key
   localStorage.setItem('locale', key)
   document.documentElement.lang = key
   open.value = false
 }
-
 const onClickOutside = (e) => {
-  if (switcherRef.value && !switcherRef.value.contains(e.target)) {
-    open.value = false
-  }
+  if (switcherRef.value && !switcherRef.value.contains(e.target)) open.value = false
 }
 
 onMounted(() => {
   document.addEventListener('click', onClickOutside)
   document.documentElement.lang = locale.value
 })
-
-onUnmounted(() => {
-  document.removeEventListener('click', onClickOutside)
-})
+onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
 <style scoped>
-.language-switcher {
-  position: relative;
-  display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
-}
-
-/* Light theme (default - for white header backgrounds) */
+.language-switcher { position: relative; display: inline-block; font-family: var(--font-mono); }
 .switcher-trigger {
   background: transparent;
-  color: #333;
-  border: 1px solid #CCC;
-  padding: 4px 12px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
+  color: var(--navbar-text, #FFF);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: border-color 0.2s, opacity 0.2s;
+  gap: 4px;
+  transition: border-color 0.2s;
 }
-
-.switcher-trigger:hover {
-  border-color: #999;
-}
-
-.caret {
-  font-size: 0.6rem;
-}
-
+.switcher-trigger:hover { border-color: var(--accent-primary, #FF4500); }
+.caret { font-size: 0.5rem; }
 .switcher-dropdown {
   position: absolute;
-  top: 100%;
-  right: 0;
+  top: 100%; right: 0;
   margin-top: 4px;
-  background: #FFFFFF;
-  border: 1px solid #DDD;
+  background: var(--bg-card, #1E1E1E);
+  border: 1px solid var(--border-color, #333);
   list-style: none;
   padding: 4px 0;
   min-width: 100%;
   z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
 }
-
 .switcher-option {
   padding: 6px 12px;
-  font-size: 0.8rem;
-  color: #333;
+  font-size: 0.75rem;
+  color: var(--text-primary, #EEE);
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s;
 }
-
-.switcher-option:hover {
-  background: #F0F0F0;
-}
-
-.switcher-option.active {
-  color: var(--orange, #FF4500);
-}
-
-
+.switcher-option:hover { background: var(--bg-secondary, #1A1A1A); }
+.switcher-option.active { color: var(--accent-primary, #FF6A33); }
 </style>

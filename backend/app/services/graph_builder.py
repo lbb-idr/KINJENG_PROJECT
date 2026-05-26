@@ -1,6 +1,6 @@
 """
 图谱构建服务
-接口2：使用Zep API构建Standalone Graph
+接口2：支持 Local (JSON+LLM) 和 Zep Cloud 两种模式
 """
 
 import os
@@ -10,14 +10,33 @@ import threading
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass
 
-from zep_cloud.client import Zep
-from zep_cloud import EpisodeData, EntityEdgeSourceTarget
-
 from ..config import Config
 from ..models.task import TaskManager, TaskStatus
-from ..utils.zep_paging import fetch_all_nodes, fetch_all_edges
 from .text_processor import TextProcessor
 from ..utils.locale import t, get_locale, set_locale
+from ..utils.logger import get_logger
+from ..utils.zep_rate_limit import rate_limit
+from ..utils.zep_paging import fetch_all_nodes, fetch_all_edges
+
+MODE_FILE = os.path.join(os.path.dirname(__file__), '../data/mode.json')
+
+
+def _get_graph_mode() -> str:
+    try:
+        import json
+        with open(MODE_FILE, 'r') as f:
+            return json.load(f).get('mode', 'local')
+    except:
+        return 'local'
+
+
+# Lazy import to avoid errors when zep is not installed
+def _get_zep_client(api_key):
+    from zep_cloud.client import Zep
+    return Zep(api_key=api_key)
+
+def _get_zep_paging():
+    return fetch_all_nodes, fetch_all_edges, rate_limit
 
 
 @dataclass
@@ -40,16 +59,24 @@ class GraphInfo:
 class GraphBuilderService:
     """
     图谱构建服务
-    负责调用Zep API构建知识图谱
+    支持两种模式:
+      - local: JSON file + LLM entity extraction (default)
+      - zep: Zep Cloud API
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, mode: Optional[str] = None):
+        self.mode = mode or _get_graph_mode()
         self.api_key = api_key or Config.ZEP_API_KEY
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY 未配置")
-        
-        self.client = Zep(api_key=self.api_key)
         self.task_manager = TaskManager()
+        self.logger = get_logger('mirofish.graph_builder')
+        
+        if self.mode == 'local':
+            from .local_graph_store import LocalGraphStore
+            self.local = LocalGraphStore()
+        else:
+            if not self.api_key:
+                raise ValueError("ZEP_API_KEY 未配置")
+            self.client = _get_zep_client(self.api_key)
     
     def build_graph_async(
         self,
@@ -143,38 +170,49 @@ class GraphBuilderService:
                 message=t('progress.textSplit', count=total_chunks)
             )
             
-            # 4. 分批发送数据
-            episode_uuids = self.add_text_batches(
-                graph_id, chunks, batch_size,
-                lambda msg, prog: self.task_manager.update_task(
-                    task_id,
-                    progress=20 + int(prog * 0.4),  # 20-60%
-                    message=msg
+            if self.mode == 'local':
+                # Local mode: extract entities via LLM
+                self.add_text_batches(
+                    graph_id, chunks, ontology, batch_size,
+                    lambda msg, prog: self.task_manager.update_task(
+                        task_id,
+                        progress=20 + int(prog * 0.6),
+                        message=msg
+                    )
                 )
-            )
-            
-            # 5. 等待Zep处理完成
-            self.task_manager.update_task(
-                task_id,
-                progress=60,
-                message=t('progress.waitingZepProcess')
-            )
-            
-            self._wait_for_episodes(
-                episode_uuids,
-                lambda msg, prog: self.task_manager.update_task(
+                self.task_manager.update_task(
                     task_id,
-                    progress=60 + int(prog * 0.3),  # 60-90%
-                    message=msg
+                    progress=90,
+                    message=t('progress.fetchingGraphInfo')
                 )
-            )
-            
-            # 6. 获取图谱信息
-            self.task_manager.update_task(
-                task_id,
-                progress=90,
-                message=t('progress.fetchingGraphInfo')
-            )
+            else:
+                # Zep mode
+                episode_uuids = self.add_text_batches(
+                    graph_id, chunks, None, batch_size,
+                    lambda msg, prog: self.task_manager.update_task(
+                        task_id,
+                        progress=20 + int(prog * 0.4),
+                        message=msg
+                    )
+                )
+                self.task_manager.update_task(
+                    task_id,
+                    progress=60,
+                    message=t('progress.waitingZepProcess')
+                )
+                self._wait_for_episodes(
+                    episode_uuids,
+                    lambda msg, prog: self.task_manager.update_task(
+                        task_id,
+                        progress=60 + int(prog * 0.3),
+                        message=msg
+                    )
+                )
+                self.task_manager.update_task(
+                    task_id,
+                    progress=90,
+                    message=t('progress.fetchingGraphInfo')
+                )
             
             graph_info = self._get_graph_info(graph_id)
             
@@ -191,22 +229,27 @@ class GraphBuilderService:
             self.task_manager.fail_task(task_id, error_msg)
     
     def create_graph(self, name: str) -> str:
-        """创建Zep图谱（公开方法）"""
         graph_id = f"mirofish_{uuid.uuid4().hex[:16]}"
-        
-        self.client.graph.create(
-            graph_id=graph_id,
-            name=name,
-            description="MiroFish Social Simulation Graph"
-        )
-        
+        if self.mode == 'local':
+            self.local.create(graph_id, name, "MiroFish Social Simulation Graph")
+        else:
+            rate_limit()
+            self.client.graph.create(
+                graph_id=graph_id,
+                name=name,
+                description="MiroFish Social Simulation Graph"
+            )
         return graph_id
     
     def set_ontology(self, graph_id: str, ontology: Dict[str, Any]):
-        """设置图谱本体（公开方法）"""
+        if self.mode == 'local':
+            self.local.set_ontology(graph_id, ontology)
+            return
+
         import warnings
         from typing import Optional
         from pydantic import Field
+        from zep_cloud import EntityEdgeSourceTarget
         from zep_cloud.external_clients.ontology import EntityModel, EntityText, EdgeModel
         
         # 抑制 Pydantic v2 关于 Field(default=None) 的警告
@@ -285,6 +328,7 @@ class GraphBuilderService:
         
         # 调用Zep API设置本体
         if entity_types or edge_definitions:
+            rate_limit()
             self.client.graph.set_ontology(
                 graph_ids=[graph_id],
                 entities=entity_types if entity_types else None,
@@ -295,53 +339,67 @@ class GraphBuilderService:
         self,
         graph_id: str,
         chunks: List[str],
+        ontology: Optional[Dict[str, Any]] = None,
         batch_size: int = 3,
         progress_callback: Optional[Callable] = None
     ) -> List[str]:
-        """分批添加文本到图谱，返回所有 episode 的 uuid 列表"""
         episode_uuids = []
         total_chunks = len(chunks)
-        
+
+        if self.mode == 'local':
+            for i in range(0, total_chunks, batch_size):
+                batch_chunks = chunks[i:i + batch_size]
+                batch_num = i // batch_size + 1
+                total_batches = (total_chunks + batch_size - 1) // batch_size
+
+                if progress_callback:
+                    progress = (i + len(batch_chunks)) / total_chunks
+                    progress_callback(
+                        t('progress.sendingBatch', current=batch_num, total=total_batches, chunks=len(batch_chunks)),
+                        progress
+                    )
+
+                self.local.add_text_batches(graph_id, batch_chunks, ontology, progress_callback, batch_size)
+            return episode_uuids
+
         for i in range(0, total_chunks, batch_size):
             batch_chunks = chunks[i:i + batch_size]
             batch_num = i // batch_size + 1
             total_batches = (total_chunks + batch_size - 1) // batch_size
-            
+
             if progress_callback:
                 progress = (i + len(batch_chunks)) / total_chunks
                 progress_callback(
                     t('progress.sendingBatch', current=batch_num, total=total_batches, chunks=len(batch_chunks)),
                     progress
                 )
-            
-            # 构建episode数据
+
+            from zep_cloud import EpisodeData
             episodes = [
                 EpisodeData(data=chunk, type="text")
                 for chunk in batch_chunks
             ]
-            
-            # 发送到Zep
+
             try:
+                rate_limit()
                 batch_result = self.client.graph.add_batch(
                     graph_id=graph_id,
                     episodes=episodes
                 )
-                
-                # 收集返回的 episode uuid
+
                 if batch_result and isinstance(batch_result, list):
                     for ep in batch_result:
                         ep_uuid = getattr(ep, 'uuid_', None) or getattr(ep, 'uuid', None)
                         if ep_uuid:
                             episode_uuids.append(ep_uuid)
-                
-                # 避免请求过快
+
                 time.sleep(1)
-                
+
             except Exception as e:
                 if progress_callback:
                     progress_callback(t('progress.batchFailed', batch=batch_num, error=str(e)), 0)
                 raise
-        
+
         return episode_uuids
     
     def _wait_for_episodes(
@@ -376,6 +434,7 @@ class GraphBuilderService:
             # 检查每个 episode 的处理状态
             for ep_uuid in list(pending_episodes):
                 try:
+                    rate_limit()
                     episode = self.client.graph.episode.get(uuid_=ep_uuid)
                     is_processed = getattr(episode, 'processed', False)
                     
@@ -401,14 +460,24 @@ class GraphBuilderService:
             progress_callback(t('progress.processingComplete', completed=completed_count, total=total_episodes), 1.0)
     
     def _get_graph_info(self, graph_id: str) -> GraphInfo:
-        """获取图谱信息"""
-        # 获取节点（分页）
+        if self.mode == 'local':
+            graph = self.local.load(graph_id)
+            entity_types = set()
+            for node in graph.get('nodes', []):
+                for label in node.get('labels', []):
+                    if label not in ["Entity", "Node"]:
+                        entity_types.add(label)
+            return GraphInfo(
+                graph_id=graph_id,
+                node_count=graph.get('node_count', 0),
+                edge_count=graph.get('edge_count', 0),
+                entity_types=list(entity_types)
+            )
+
         nodes = fetch_all_nodes(self.client, graph_id)
 
-        # 获取边（分页）
         edges = fetch_all_edges(self.client, graph_id)
 
-        # 统计实体类型
         entity_types = set()
         for node in nodes:
             if node.labels:
@@ -424,15 +493,9 @@ class GraphBuilderService:
         )
     
     def get_graph_data(self, graph_id: str) -> Dict[str, Any]:
-        """
-        获取完整图谱数据（包含详细信息）
-        
-        Args:
-            graph_id: 图谱ID
-            
-        Returns:
-            包含nodes和edges的字典，包括时间信息、属性等详细数据
-        """
+        if self.mode == 'local':
+            return self.local.get_graph_data(graph_id)
+
         nodes = fetch_all_nodes(self.client, graph_id)
         edges = fetch_all_edges(self.client, graph_id)
 
@@ -501,6 +564,8 @@ class GraphBuilderService:
         }
     
     def delete_graph(self, graph_id: str):
-        """删除图谱"""
-        self.client.graph.delete(graph_id=graph_id)
+        if self.mode == 'local':
+            self.local.delete(graph_id)
+        else:
+            self.client.graph.delete(graph_id=graph_id)
 

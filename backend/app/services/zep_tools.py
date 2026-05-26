@@ -24,6 +24,21 @@ from ..utils.zep_paging import fetch_all_nodes, fetch_all_edges
 logger = get_logger('mirofish.zep_tools')
 
 
+def create_tools_service(graph_id: str):
+    """Factory: returns ZepToolsService with pre-loaded data for local mode."""
+    from .graph_builder import _get_graph_mode
+    mode = _get_graph_mode()
+    if mode == 'local':
+        from .local_graph_store import LocalGraphStore
+        store = LocalGraphStore()
+        data = store.get_graph_data(graph_id)
+        return ZepToolsService(
+            nodes_data=data.get('nodes', []),
+            edges_data=data.get('edges', [])
+        )
+    return ZepToolsService()
+
+
 @dataclass
 class SearchResult:
     """搜索结果"""
@@ -422,12 +437,19 @@ class ZepToolsService:
     MAX_RETRIES = 3
     RETRY_DELAY = 2.0
     
-    def __init__(self, api_key: Optional[str] = None, llm_client: Optional[LLMClient] = None):
-        self.api_key = api_key or Config.ZEP_API_KEY
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY 未配置")
+    def __init__(self, api_key: Optional[str] = None, llm_client: Optional[LLMClient] = None,
+                 nodes_data: Optional[List[Dict]] = None, edges_data: Optional[List[Dict]] = None):
+        self._nodes_data = nodes_data
+        self._edges_data = edges_data
         
-        self.client = Zep(api_key=self.api_key)
+        if nodes_data is not None:
+            self.client = None
+            self.api_key = None
+        else:
+            self.api_key = api_key or Config.ZEP_API_KEY
+            if not self.api_key:
+                raise ValueError("ZEP_API_KEY 未配置")
+            self.client = Zep(api_key=self.api_key)
         # LLM客户端用于InsightForge生成子问题
         self._llm_client = llm_client
         logger.info(t("console.zepToolsInitialized"))
@@ -648,16 +670,20 @@ class ZepToolsService:
         )
     
     def get_all_nodes(self, graph_id: str) -> List[NodeInfo]:
-        """
-        获取图谱的所有节点（分页获取）
-
-        Args:
-            graph_id: 图谱ID
-
-        Returns:
-            节点列表
-        """
         logger.info(t("console.fetchingAllNodes", graphId=graph_id))
+
+        if self._nodes_data is not None:
+            result = []
+            for n in self._nodes_data:
+                result.append(NodeInfo(
+                    uuid=n.get("uuid", ""),
+                    name=n.get("name", ""),
+                    labels=n.get("labels", []),
+                    summary=n.get("summary", ""),
+                    attributes=n.get("attributes", {})
+                ))
+            logger.info(t("console.fetchedNodes", count=len(result)))
+            return result
 
         nodes = fetch_all_nodes(self.client, graph_id)
 
@@ -676,17 +702,28 @@ class ZepToolsService:
         return result
 
     def get_all_edges(self, graph_id: str, include_temporal: bool = True) -> List[EdgeInfo]:
-        """
-        获取图谱的所有边（分页获取，包含时间信息）
-
-        Args:
-            graph_id: 图谱ID
-            include_temporal: 是否包含时间信息（默认True）
-
-        Returns:
-            边列表（包含created_at, valid_at, invalid_at, expired_at）
-        """
         logger.info(t("console.fetchingAllEdges", graphId=graph_id))
+
+        if self._edges_data is not None:
+            result = []
+            for e in self._edges_data:
+                edge_info = EdgeInfo(
+                    uuid=e.get("uuid", ""),
+                    name=e.get("name", "") or e.get("fact_type", ""),
+                    fact=e.get("fact", ""),
+                    source_node_uuid=e.get("source_node_uuid", ""),
+                    target_node_uuid=e.get("target_node_uuid", ""),
+                    source_node_name=e.get("source_node_name", ""),
+                    target_node_name=e.get("target_node_name", "")
+                )
+                if include_temporal:
+                    edge_info.created_at = e.get("created_at")
+                    edge_info.valid_at = e.get("valid_at")
+                    edge_info.invalid_at = e.get("invalid_at")
+                    edge_info.expired_at = e.get("expired_at")
+                result.append(edge_info)
+            logger.info(t("console.fetchedEdges", count=len(result)))
+            return result
 
         edges = fetch_all_edges(self.client, graph_id)
 
@@ -714,17 +751,20 @@ class ZepToolsService:
         return result
     
     def get_node_detail(self, node_uuid: str) -> Optional[NodeInfo]:
-        """
-        获取单个节点的详细信息
-        
-        Args:
-            node_uuid: 节点UUID
-            
-        Returns:
-            节点信息或None
-        """
         logger.info(t("console.fetchingNodeDetail", uuid=node_uuid[:8]))
         
+        if self._nodes_data is not None:
+            for n in self._nodes_data:
+                if n.get("uuid") == node_uuid:
+                    return NodeInfo(
+                        uuid=n.get("uuid", ""),
+                        name=n.get("name", ""),
+                        labels=n.get("labels", []),
+                        summary=n.get("summary", ""),
+                        attributes=n.get("attributes", {})
+                    )
+            return None
+
         try:
             node = self._call_with_retry(
                 func=lambda: self.client.graph.node.get(uuid_=node_uuid),

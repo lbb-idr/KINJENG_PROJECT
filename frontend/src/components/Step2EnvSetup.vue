@@ -648,7 +648,8 @@ const props = defineProps({
   simulationId: String,  // 从父组件传入
   projectData: Object,
   graphData: Object,
-  systemLogs: Array
+  systemLogs: Array,
+  initialRounds: Number  // 从 SimulationTypeView 传入的 preferensi awal ronde
 })
 
 const emit = defineEmits(['go-back', 'next-step', 'add-log', 'update-status'])
@@ -673,7 +674,7 @@ let lastLoggedConfigStage = ''
 
 // 模拟轮数配置
 const useCustomRounds = ref(false) // 默认使用自动配置轮数
-const customMaxRounds = ref(40)   // 默认推荐40轮
+const customMaxRounds = ref(props.initialRounds || 40)   // 默认推荐40轮, kl udah dipilih di awal ikut preferensi user
 
 // Watch stage to update phase
 watch(currentStage, (newStage) => {

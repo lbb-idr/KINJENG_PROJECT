@@ -50,6 +50,8 @@
     "metricHighAvail": "Scalable",
     "metricHighAvailDesc": "Millions of Agents",
     "workflowSequence": "Workflow",
+    "step00Title": "Select Simulation",
+    "step00Desc": "Choose simulation type: academic, political, market, social, or custom",
     "step01Title": "Graph Build",
     "step01Desc": "Seed extraction & memory injection & GraphRAG construction",
     "step02Title": "Env Setup",
@@ -69,13 +71,16 @@
     "promptPlaceholder": "// Describe your simulation or prediction requirement in natural language",
     "engineBadge": "Engine: MiroFish-V1.0",
     "startEngine": "Start Engine",
-    "initializing": "Initializing..."
+    "initializing": "Initializing...",
+    "selectTypeFirst": "+ Select Simulation Type",
+    "changeType": "Change"
   },
   "main": {
     "layoutGraph": "Graph",
     "layoutSplit": "Split",
     "layoutWorkbench": "Workbench",
-    "stepNames": ["Graph Build", "Env Setup", "Run Simulation", "Report Generation", "Deep Interaction"]
+    "stepNames": ["Graph Build", "Env Setup", "Run Simulation", "Report Generation", "Deep Interaction"],
+    "toggleTheme": "Toggle theme"
   },
   "step1": {
     "ontologyGeneration": "Ontology Generation",
@@ -661,5 +666,28 @@
     "llmSelectAgentFailed": "LLM agent selection failed, using default selection: {error}",
     "generateInterviewQuestionsFailed": "Failed to generate interview questions: {error}",
     "generateInterviewSummaryFailed": "Failed to generate interview summary: {error}"
+  },
+  "simType": {
+    "academic": "Academic",
+    "political": "Political",
+    "market": "Market",
+    "social": "Social",
+    "custom": "Custom",
+    "upload": "Upload",
+    "engine": "Engine",
+    "simulate": "Simulate",
+    "report": "Report",
+    "chooseTitle": "Choose Simulation Type",
+    "chooseDesc": "Select the simulation type that fits your research needs. Each type has different parameters and outputs.",
+    "parameters": "Simulation Parameters",
+    "agentCount": "Agent Count",
+    "simulationRounds": "Simulation Rounds",
+    "platform": "Platform",
+    "platformTwitter": "Twitter",
+    "platformReddit": "Reddit",
+    "platformBoth": "Both",
+    "likertScale": "Likert Scale",
+    "back": "Back",
+    "confirmAndContinue": "Confirm & Continue"
   }
 }

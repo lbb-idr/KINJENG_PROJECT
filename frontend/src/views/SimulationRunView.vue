@@ -24,7 +24,7 @@
         <LanguageSwitcher />
         <div class="step-divider"></div>
         <div class="workflow-step">
-          <span class="step-num">Step 3/5</span>
+          <span class="step-num">Langkah 3/5</span>
           <span class="step-name">{{ $tm('main.stepNames')[2] }}</span>
         </div>
         <div class="step-divider"></div>
@@ -70,13 +70,17 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
+import axios from 'axios'
 import GraphPanel from '../components/GraphPanel.vue'
 import Step3Simulation from '../components/Step3Simulation.vue'
 import { getProject, getGraphData } from '../api/graph'
 import { getSimulation, getSimulationConfig, stopSimulation, closeSimulationEnv, getEnvStatus } from '../api/simulation'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import { useI18n } from 'vue-i18n'
+
+const API = 'http://localhost:5001/api'
+const STORAGE_KEY = 'mirofish_sim_run'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -92,14 +96,65 @@ const viewMode = ref('split')
 
 // Data State
 const currentSimulationId = ref(route.params.simulationId)
-// 直接在初始化时从 query 参数获取 maxRounds，确保子组件能立即获取到值
-const maxRounds = ref(route.query.maxRounds ? parseInt(route.query.maxRounds) : null)
-const minutesPerRound = ref(30) // 默认每轮30分钟
+const maxRounds = ref(null)
+const minutesPerRound = ref(30)
 const projectData = ref(null)
 const graphData = ref(null)
 const graphLoading = ref(false)
 const systemLogs = ref([])
 const currentStatus = ref('processing') // processing | completed | error
+
+// --- Session Persistence ---
+function saveSession() {
+  if (!currentSimulationId.value) return
+  try {
+    const data = {
+      id: currentSimulationId.value,
+      status: currentStatus.value,
+      viewMode: viewMode.value,
+      maxRounds: maxRounds.value,
+      minutesPerRound: minutesPerRound.value,
+      logs: systemLogs.value.slice(-30),
+      savedAt: Date.now()
+    }
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch (e) {
+    // storage penuh, abaikan
+  }
+}
+
+function restoreSession() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) return false
+    const saved = JSON.parse(raw)
+    if (saved.id !== currentSimulationId.value) return false
+    if (Date.now() - saved.savedAt > 30 * 60 * 1000) {
+      clearSession()
+      return false
+    }
+    currentStatus.value = saved.status || 'processing'
+    viewMode.value = saved.viewMode || 'split'
+    maxRounds.value = saved.maxRounds || null
+    minutesPerRound.value = saved.minutesPerRound || 30
+    if (saved.logs) systemLogs.value = saved.logs
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+function clearSession() {
+  sessionStorage.removeItem(STORAGE_KEY)
+}
+
+watch(() => currentSimulationId.value, () => clearSession())
+watch([currentStatus, viewMode, systemLogs], saveSession, { deep: true })
+
+// Cek query params (dari navigasi SimulationView)
+if (route.query.maxRounds) {
+  maxRounds.value = parseInt(route.query.maxRounds)
+}
 
 // --- Computed Layout Styles ---
 const leftPanelStyle = computed(() => {
@@ -120,9 +175,9 @@ const statusClass = computed(() => {
 })
 
 const statusText = computed(() => {
-  if (currentStatus.value === 'error') return 'Error'
-  if (currentStatus.value === 'completed') return 'Completed'
-  return 'Running'
+  if (currentStatus.value === 'error') return 'Gagal'
+  if (currentStatus.value === 'completed') return 'Selesai'
+  return 'Berjalan'
 })
 
 const isSimulating = computed(() => currentStatus.value === 'processing')
@@ -275,11 +330,11 @@ const refreshGraph = () => {
 
 // --- Auto Refresh Logic ---
 let graphRefreshTimer = null
+let heartbeatTimer = null
 
 const startGraphRefresh = () => {
   if (graphRefreshTimer) return
   addLog(t('log.graphRealtimeRefreshStart'))
-  // 立即刷新一次，然后每30秒刷新
   graphRefreshTimer = setInterval(refreshGraph, 30000)
 }
 
@@ -291,28 +346,87 @@ const stopGraphRefresh = () => {
   }
 }
 
+// --- Heartbeat (biar backend tau frontend masih hidup) ---
+function startHeartbeat() {
+  if (heartbeatTimer) return
+  heartbeatTimer = setInterval(() => {
+    axios.post(`${API}/simulation/heartbeat/${currentSimulationId.value}`).catch(() => {})
+  }, 30000)
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer)
+    heartbeatTimer = null
+  }
+}
+
+function sendDisconnect() {
+  if (currentStatus.value === 'processing') {
+    navigator.sendBeacon(`${API}/simulation/disconnect/${currentSimulationId.value}`, '')
+  }
+}
+
 watch(isSimulating, (newValue) => {
   if (newValue) {
     startGraphRefresh()
+    startHeartbeat()
   } else {
     stopGraphRefresh()
+    stopHeartbeat()
   }
 }, { immediate: true })
 
+let restoring = false
+
 onMounted(() => {
-  addLog(t('log.simRunViewInit'))
-  
-  // 记录 maxRounds 配置（值已在初始化时从 query 参数获取）
-  if (maxRounds.value) {
-    addLog(t('log.customRounds', { rounds: maxRounds.value }))
+  // Coba restore dari sessionStorage
+  if (restoreSession()) {
+    addLog('🔄 Session dipulihkan')
+    restoring = true
   }
-  
-  loadSimulationData()
+
+  if (!restoring) {
+    addLog(t('log.simRunViewInit'))
+    if (maxRounds.value) {
+      addLog(t('log.customRounds', { rounds: maxRounds.value }))
+    }
+    loadSimulationData()
+  }
+
+  // Selalu load graph data (even saat session restore)
+  if (currentSimulationId.value) {
+    loadGraph(currentSimulationId.value)
+  }
+
+  // Peringatan refresh/navigasi
+  window.addEventListener('beforeunload', warnBeforeUnload)
 })
 
 onUnmounted(() => {
   stopGraphRefresh()
+  stopHeartbeat()
+  window.removeEventListener('beforeunload', warnBeforeUnload)
 })
+
+onBeforeRouteLeave((to, from, next) => {
+  if (currentStatus.value === 'processing') {
+    const answer = window.confirm('Simulasi masih berjalan. Yakin ingin meninggalkan halaman?')
+    if (!answer) {
+      next(false)
+      return
+    }
+  }
+  next()
+})
+
+function warnBeforeUnload(e) {
+  if (currentStatus.value === 'processing') {
+    sendDisconnect()
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
 </script>
 
 <style scoped>

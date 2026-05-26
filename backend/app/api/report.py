@@ -16,6 +16,7 @@ from ..models.project import ProjectManager
 from ..models.task import TaskManager, TaskStatus
 from ..utils.logger import get_logger
 from ..utils.locale import t, get_locale, set_locale
+from ..services.zep_tools import create_tools_service
 
 logger = get_logger('mirofish.api.report')
 
@@ -136,10 +137,12 @@ def generate_report():
                 )
                 
                 # 创建Report Agent
+                tools = create_tools_service(graph_id)
                 agent = ReportAgent(
                     graph_id=graph_id,
                     simulation_id=simulation_id,
-                    simulation_requirement=simulation_requirement
+                    simulation_requirement=simulation_requirement,
+                    zep_tools=tools
                 )
                 
                 # 进度回调
@@ -542,10 +545,12 @@ def chat_with_report_agent():
         simulation_requirement = project.simulation_requirement or ""
         
         # 创建Agent并进行对话
+        tools = create_tools_service(graph_id)
         agent = ReportAgent(
             graph_id=graph_id,
             simulation_id=simulation_id,
-            simulation_requirement=simulation_requirement
+            simulation_requirement=simulation_requirement,
+            zep_tools=tools
         )
         
         result = agent.chat(message=message, chat_history=chat_history)
@@ -957,9 +962,9 @@ def search_graph_tool():
                 "error": t('api.requireGraphIdAndQuery')
             }), 400
         
-        from ..services.zep_tools import ZepToolsService
+        from ..services.zep_tools import create_tools_service
         
-        tools = ZepToolsService()
+        tools = create_tools_service(graph_id)
         result = tools.search_graph(
             graph_id=graph_id,
             query=query,
@@ -1001,9 +1006,9 @@ def get_graph_statistics_tool():
                 "error": t('api.requireGraphId')
             }), 400
         
-        from ..services.zep_tools import ZepToolsService
+        from ..services.zep_tools import create_tools_service
         
-        tools = ZepToolsService()
+        tools = create_tools_service(graph_id)
         result = tools.get_graph_statistics(graph_id)
         
         return jsonify({

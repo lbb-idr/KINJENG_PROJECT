@@ -24,7 +24,7 @@
         <LanguageSwitcher />
         <div class="step-divider"></div>
         <div class="workflow-step">
-          <span class="step-num">Step 2/5</span>
+          <span class="step-num">Langkah 2/5</span>
           <span class="step-name">{{ $tm('main.stepNames')[1] }}</span>
         </div>
         <div class="step-divider"></div>
@@ -55,6 +55,7 @@
           :projectData="projectData"
           :graphData="graphData"
           :systemLogs="systemLogs"
+          :initialRounds="pendingUpload.surveyParams.maxRounds"
           @go-back="handleGoBack"
           @next-step="handleNextStep"
           @add-log="addLog"
@@ -66,14 +67,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import GraphPanel from '../components/GraphPanel.vue'
 import Step2EnvSetup from '../components/Step2EnvSetup.vue'
 import { getProject, getGraphData } from '../api/graph'
 import { getSimulation, stopSimulation, getEnvStatus, closeSimulationEnv } from '../api/simulation'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import { useI18n } from 'vue-i18n'
+import pendingUpload from '../store/pendingUpload'
+
+const STORAGE_KEY = 'mirofish_sim_setup'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -95,6 +99,45 @@ const graphLoading = ref(false)
 const systemLogs = ref([])
 const currentStatus = ref('processing') // processing | completed | error
 
+// --- Session Persistence ---
+function saveSession() {
+  if (!currentSimulationId.value) return
+  try {
+    const data = {
+      id: currentSimulationId.value,
+      status: currentStatus.value,
+      viewMode: viewMode.value,
+      logs: systemLogs.value.slice(-30),
+      savedAt: Date.now()
+    }
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch (e) {}
+}
+
+function restoreSession() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) return false
+    const saved = JSON.parse(raw)
+    if (saved.id !== currentSimulationId.value) return false
+    if (Date.now() - saved.savedAt > 30 * 60 * 1000) {
+      clearSession()
+      return false
+    }
+    currentStatus.value = saved.status || 'processing'
+    viewMode.value = saved.viewMode || 'split'
+    if (saved.logs) systemLogs.value = saved.logs
+    return true
+  } catch (e) { return false }
+}
+
+function clearSession() {
+  sessionStorage.removeItem(STORAGE_KEY)
+}
+
+watch(() => currentSimulationId.value, () => clearSession())
+watch([currentStatus, viewMode, systemLogs], saveSession, { deep: true })
+
 // --- Computed Layout Styles ---
 const leftPanelStyle = computed(() => {
   if (viewMode.value === 'graph') return { width: '100%', opacity: 1, transform: 'translateX(0)' }
@@ -114,9 +157,9 @@ const statusClass = computed(() => {
 })
 
 const statusText = computed(() => {
-  if (currentStatus.value === 'error') return 'Error'
-  if (currentStatus.value === 'completed') return 'Ready'
-  return 'Preparing'
+  if (currentStatus.value === 'error') return 'Gagal'
+  if (currentStatus.value === 'completed') return 'Siap'
+  return 'Menyiapkan'
 })
 
 // --- Helpers ---
@@ -292,13 +335,39 @@ const refreshGraph = () => {
 }
 
 onMounted(async () => {
-  addLog(t('log.simViewInit'))
-  
-  // 检查并关闭正在运行的模拟（用户从 Step 3 返回时）
-  await checkAndStopRunningSimulation()
-  
-  // 加载模拟数据
-  loadSimulationData()
+  let restoring = restoreSession()
+
+  if (!restoring) {
+    addLog(t('log.simViewInit'))
+    await checkAndStopRunningSimulation()
+    loadSimulationData()
+  } else {
+    addLog('🔄 Session dipulihkan')
+    loadSimulationData()
+  }
+
+  window.addEventListener('beforeunload', warnBeforeUnload)
+})
+
+onBeforeRouteLeave((to, from, next) => {
+  if (currentStatus.value === 'processing') {
+    if (!window.confirm('Ada proses yang masih berjalan. Yakin ingin meninggalkan halaman?')) {
+      next(false)
+      return
+    }
+  }
+  next()
+})
+
+function warnBeforeUnload(e) {
+  if (currentStatus.value === 'processing') {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', warnBeforeUnload)
 })
 </script>
 

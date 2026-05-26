@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import SimulationType from '../views/SimulationTypeView.vue'
+import ParliamentView from '../views/ParliamentView.vue'
+import SurveyResultsView from '../views/SurveyResultsView.vue'
 import Process from '../views/MainView.vue'
 import SimulationView from '../views/SimulationView.vue'
 import SimulationRunView from '../views/SimulationRunView.vue'
@@ -11,6 +14,21 @@ const routes = [
     path: '/',
     name: 'Home',
     component: Home
+  },
+  {
+    path: '/choose-simulation',
+    name: 'SimulationType',
+    component: SimulationType
+  },
+  {
+    path: '/parliament',
+    name: 'Parliament',
+    component: ParliamentView
+  },
+  {
+    path: '/survey-results',
+    name: 'SurveyResults',
+    component: SurveyResultsView
   },
   {
     path: '/process/:projectId',

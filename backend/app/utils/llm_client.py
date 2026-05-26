@@ -6,9 +6,13 @@ LLM客户端封装
 import json
 import re
 from typing import Optional, Dict, Any, List
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 
 from ..config import Config
+from .retry import retry_with_backoff
+from ..utils.logger import get_logger
+
+logger = get_logger('mirofish.llm_client')
 
 
 class LLMClient:
@@ -32,6 +36,13 @@ class LLMClient:
             base_url=self.base_url
         )
     
+    @retry_with_backoff(
+        max_retries=3,
+        initial_delay=1.0,
+        max_delay=10.0,
+        exceptions=(RateLimitError,),
+        on_retry=lambda e, n: logger.warning(f"LLM请求第{n}次重试: {str(e)}")
+    )
     def chat(
         self,
         messages: List[Dict[str, str]],

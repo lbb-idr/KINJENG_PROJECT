@@ -1,0 +1,14 @@
+[data-theme="light"] {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F5F5;
+  --bg-card: #FFFFFF;
+  --bg-selected: rgba(255, 69, 0, 0.03);
+  --text-primary: #000000;
+  --text-secondary: #666666;
+  --border-color: #E5E5E5;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --black: #000000;
+  --white: #FFFFFF;
+  --accent-primary: #FF4500;
+  --accent-secondary: #FF6A33;
+}

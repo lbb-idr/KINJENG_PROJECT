@@ -24,7 +24,7 @@
         <LanguageSwitcher />
         <div class="step-divider"></div>
         <div class="workflow-step">
-          <span class="step-num">Step 4/5</span>
+          <span class="step-num">Langkah 4/5</span>
           <span class="step-name">{{ $tm('main.stepNames')[3] }}</span>
         </div>
         <div class="step-divider"></div>
@@ -52,12 +52,28 @@
       <!-- Right Panel: Step4 报告生成 -->
       <div class="panel-wrapper right" :style="rightPanelStyle">
         <Step4Report
+          v-if="!showRetry"
           :reportId="currentReportId"
           :simulationId="simulationId"
           :systemLogs="systemLogs"
           @add-log="addLog"
           @update-status="updateStatus"
         />
+        <!-- Retry state: laporan gagal dimuat -->
+        <div v-else class="retry-container">
+          <div class="retry-card">
+            <div class="retry-icon">!</div>
+            <h3 class="retry-title">Laporan Gagal Dimuat</h3>
+            <p class="retry-desc">Laporan sebelumnya gagal diproses. Klik tombol di bawah untuk mencoba lagi.</p>
+            <button 
+              class="retry-btn" 
+              :disabled="retrying" 
+              @click="retryReportGeneration"
+            >
+              {{ retrying ? 'Memproses...' : 'Generate Ulang Laporan' }}
+            </button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -71,7 +87,7 @@ import GraphPanel from '../components/GraphPanel.vue'
 import Step4Report from '../components/Step4Report.vue'
 import { getProject, getGraphData } from '../api/graph'
 import { getSimulation } from '../api/simulation'
-import { getReport } from '../api/report'
+import { getReport, generateReport } from '../api/report'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 
 const route = useRoute()
@@ -95,6 +111,44 @@ const graphLoading = ref(false)
 const systemLogs = ref([])
 const currentStatus = ref('processing') // processing | completed | error
 
+// Report retry state
+const showRetry = ref(false)
+const retrying = ref(false)
+
+// Session persistence
+const STORAGE_KEY = 'mirofish_report'
+function saveSession() {
+  if (!currentReportId.value) return
+  try {
+    const data = {
+      reportId: currentReportId.value,
+      simulationId: simulationId.value,
+      status: currentStatus.value,
+      logs: systemLogs.value.slice(-30),
+      savedAt: Date.now()
+    }
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch (e) {}
+}
+function restoreSession() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) return false
+    const saved = JSON.parse(raw)
+    if (saved.reportId !== currentReportId.value) return false
+    if (Date.now() - saved.savedAt > 30 * 60 * 1000) {
+      sessionStorage.removeItem(STORAGE_KEY)
+      return false
+    }
+    currentReportId.value = saved.reportId
+    simulationId.value = saved.simulationId || null
+    currentStatus.value = saved.status || 'processing'
+    if (saved.logs) systemLogs.value = saved.logs
+    return true
+  } catch (e) { return false }
+}
+watch([currentStatus, systemLogs], saveSession, { deep: true })
+
 // --- Computed Layout Styles ---
 const leftPanelStyle = computed(() => {
   if (viewMode.value === 'graph') return { width: '100%', opacity: 1, transform: 'translateX(0)' }
@@ -114,9 +168,9 @@ const statusClass = computed(() => {
 })
 
 const statusText = computed(() => {
-  if (currentStatus.value === 'error') return 'Error'
-  if (currentStatus.value === 'completed') return 'Completed'
-  return 'Generating'
+  if (currentStatus.value === 'error') return 'Gagal'
+  if (currentStatus.value === 'completed') return 'Selesai'
+  return 'Menghasilkan'
 })
 
 // --- Helpers ---
@@ -130,6 +184,35 @@ const addLog = (msg) => {
 
 const updateStatus = (status) => {
   currentStatus.value = status
+}
+
+const retryReportGeneration = async () => {
+  if (!simulationId.value || retrying.value) return
+  retrying.value = true
+  showRetry.value = false
+  addLog('Memulai ulang generate laporan...')
+  try {
+    const res = await generateReport({
+      simulation_id: simulationId.value,
+      force_regenerate: true
+    })
+    if (res.success && res.data) {
+      currentReportId.value = res.data.report_id
+      showRetry.value = false
+      currentStatus.value = 'processing'
+      addLog('Generate laporan dimulai ulang')
+      // reload data after short delay
+      setTimeout(() => loadReportData(), 2000)
+    } else {
+      addLog('Gagal memulai ulang laporan: ' + (res.error || ''))
+      showRetry.value = true
+    }
+  } catch (err) {
+    addLog('Error saat retry laporan: ' + err.message)
+    showRetry.value = true
+  } finally {
+    retrying.value = false
+  }
 }
 
 // --- Layout Methods ---
@@ -151,6 +234,7 @@ const loadReportData = async () => {
     if (reportRes.success && reportRes.data) {
       const reportData = reportRes.data
       simulationId.value = reportData.simulation_id
+      showRetry.value = false
 
       if (simulationId.value) {
         // 获取 simulation 信息
@@ -175,9 +259,19 @@ const loadReportData = async () => {
       }
     } else {
       addLog(t('log.getReportInfoFailed', { error: reportRes.error || t('common.unknownError') }))
+      // Report gagal dimuat — tampilkan tombol retry klo ada simulation_id
+      if (simulationId.value) {
+        showRetry.value = true
+        currentStatus.value = 'error'
+      }
     }
   } catch (err) {
     addLog(t('log.loadException', { error: err.message }))
+    // Ada exception — retry juga dimungkinkan klo simulation_id ada
+    if (simulationId.value) {
+      showRetry.value = true
+      currentStatus.value = 'error'
+    }
   }
 }
 
@@ -209,11 +303,17 @@ watch(() => route.params.reportId, (newId) => {
     currentReportId.value = newId
     loadReportData()
   }
-}, { immediate: true })
+})
 
 onMounted(() => {
-  addLog(t('log.reportViewInit'))
-  loadReportData()
+  if (!restoreSession()) {
+    addLog(t('log.reportViewInit'))
+    loadReportData()
+  } else {
+    addLog('Session report dipulihkan')
+    // Tetap fetch data terbaru (simulationId, project, graph)
+    loadReportData()
+  }
 })
 </script>
 
@@ -349,5 +449,62 @@ onMounted(() => {
 
 .panel-wrapper.left {
   border-right: 1px solid #EAEAEA;
+}
+
+/* Retry container */
+.retry-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+}
+.retry-card {
+  text-align: center;
+  max-width: 400px;
+}
+.retry-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #FEF2F2;
+  color: #DC2626;
+  font-size: 28px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.retry-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0 0 8px;
+}
+.retry-desc {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+.retry-btn {
+  padding: 10px 28px;
+  border: none;
+  border-radius: 8px;
+  background: #2563EB;
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.retry-btn:hover:not(:disabled) {
+  background: #1D4ED8;
+}
+.retry-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

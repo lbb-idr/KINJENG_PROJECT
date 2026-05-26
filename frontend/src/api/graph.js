@@ -68,3 +68,27 @@ export function getProject(projectId) {
     method: 'get'
   })
 }
+
+/**
+ * 获取当前图谱引擎模式
+ * @returns {Promise<{mode: string}>}
+ */
+export function getGraphMode() {
+  return service({
+    url: '/api/system/graph-mode',
+    method: 'get'
+  })
+}
+
+/**
+ * 设置图谱引擎模式
+ * @param {string} mode - 'local' 或 'zep'
+ * @returns {Promise}
+ */
+export function setGraphMode(mode) {
+  return service({
+    url: '/api/system/graph-mode',
+    method: 'post',
+    data: { mode }
+  })
+}
