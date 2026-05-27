@@ -3,6 +3,8 @@
 用于跟踪长时间运行的任务（如图谱构建）
 """
 
+import json
+import os
 import uuid
 import threading
 from datetime import datetime
@@ -56,11 +58,12 @@ class Task:
 class TaskManager:
     """
     任务管理器
-    线程安全的任务状态管理
+    线程安全的任务状态管理，持久化到文件
     """
     
     _instance = None
     _lock = threading.Lock()
+    _STORAGE_FILENAME = "tasks.json"
     
     def __new__(cls):
         """单例模式"""
@@ -70,7 +73,89 @@ class TaskManager:
                     cls._instance = super().__new__(cls)
                     cls._instance._tasks: Dict[str, Task] = {}
                     cls._instance._task_lock = threading.Lock()
+                    cls._instance._storage_path: Optional[str] = None
+                    cls._instance._last_mtime: float = 0
         return cls._instance
+    
+    def init_storage(self, storage_dir: str):
+        """初始化存储目录并加载已有任务"""
+        self._storage_path = os.path.join(storage_dir, self._STORAGE_FILENAME)
+        os.makedirs(storage_dir, exist_ok=True)
+        self._load_from_disk()
+    
+    def _needs_reload(self) -> bool:
+        """检查文件是否被其他进程修改过"""
+        if not self._storage_path or not os.path.exists(self._storage_path):
+            return False
+        try:
+            mtime = os.path.getmtime(self._storage_path)
+            return mtime > self._last_mtime
+        except Exception:
+            return False
+    
+    def _serialize_tasks(self) -> Dict[str, dict]:
+        """序列化所有任务为可 JSON 的字典"""
+        return {
+            tid: {
+                "task_id": task.task_id,
+                "task_type": task.task_type,
+                "status": task.status.value,
+                "created_at": task.created_at.isoformat(),
+                "updated_at": task.updated_at.isoformat(),
+                "progress": task.progress,
+                "message": task.message,
+                "result": task.result,
+                "error": task.error,
+                "metadata": task.metadata,
+                "progress_detail": task.progress_detail,
+            }
+            for tid, task in self._tasks.items()
+        }
+    
+    def _deserialize_task(self, data: dict) -> Task:
+        """反序列化一个任务"""
+        return Task(
+            task_id=data["task_id"],
+            task_type=data["task_type"],
+            status=TaskStatus(data["status"]),
+            created_at=datetime.fromisoformat(data["created_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]),
+            progress=data.get("progress", 0),
+            message=data.get("message", ""),
+            result=data.get("result"),
+            error=data.get("error"),
+            metadata=data.get("metadata", {}),
+            progress_detail=data.get("progress_detail", {}),
+        )
+    
+    def _persist(self):
+        """写入任务到磁盘"""
+        if not self._storage_path:
+            return
+        try:
+            with self._task_lock:
+                data = self._serialize_tasks()
+            tmp = self._storage_path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, self._storage_path)
+        except Exception:
+            pass
+    
+    def _load_from_disk(self):
+        """从磁盘加载任务"""
+        if not self._storage_path or not os.path.exists(self._storage_path):
+            return
+        try:
+            with open(self._storage_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            with self._task_lock:
+                self._tasks = {}
+                for tid, task_data in data.items():
+                    self._tasks[tid] = self._deserialize_task(task_data)
+            self._last_mtime = os.path.getmtime(self._storage_path)
+        except Exception:
+            self._tasks = {}
     
     def create_task(self, task_type: str, metadata: Optional[Dict] = None) -> str:
         """
@@ -98,10 +183,13 @@ class TaskManager:
         with self._task_lock:
             self._tasks[task_id] = task
         
+        self._persist()
         return task_id
     
     def get_task(self, task_id: str) -> Optional[Task]:
-        """获取任务"""
+        """获取任务——若文件已被其他进程更新则自动重载"""
+        if self._needs_reload():
+            self._load_from_disk()
         with self._task_lock:
             return self._tasks.get(task_id)
     
@@ -143,6 +231,8 @@ class TaskManager:
                     task.error = error
                 if progress_detail is not None:
                     task.progress_detail = progress_detail
+        
+        self._persist()
     
     def complete_task(self, task_id: str, result: Dict):
         """标记任务完成"""
@@ -165,6 +255,8 @@ class TaskManager:
     
     def list_tasks(self, task_type: Optional[str] = None) -> list:
         """列出任务"""
+        if self._needs_reload():
+            self._load_from_disk()
         with self._task_lock:
             tasks = list(self._tasks.values())
             if task_type:
@@ -173,6 +265,8 @@ class TaskManager:
     
     def find_task_by_metadata(self, key: str, value: str) -> Optional[Task]:
         """通过 metadata 字段查找任务"""
+        if self._needs_reload():
+            self._load_from_disk()
         with self._task_lock:
             for task in self._tasks.values():
                 if task.metadata.get(key) == value:
@@ -191,4 +285,7 @@ class TaskManager:
             ]
             for tid in old_ids:
                 del self._tasks[tid]
+        
+        if old_ids:
+            self._persist()
 

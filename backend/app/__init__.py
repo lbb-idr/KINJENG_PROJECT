@@ -43,6 +43,13 @@ def create_app(config_class=Config):
     # 启用CORS
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     
+    # 初始化 TaskManager 持久化存储
+    from .models.task import TaskManager
+    storage_dir = os.path.join(app.config.get('UPLOAD_FOLDER', os.path.join(app.root_path, '..', 'uploads')), 'tasks')
+    TaskManager().init_storage(storage_dir)
+    if should_log_startup:
+        logger.info(f"任务存储目录: {storage_dir}")
+
     # Register cleanup on server shutdown (keep)
     from .services.simulation_runner import SimulationRunner
     SimulationRunner.register_cleanup()
