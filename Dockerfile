@@ -13,6 +13,9 @@ COPY backend/requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy locales (needed by locale.py at runtime)
+COPY locales/ ./locales/
+
 # Copy backend source code
 COPY backend/ .
 
