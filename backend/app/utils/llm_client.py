@@ -22,11 +22,13 @@ class LLMClient:
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        temperature: Optional[float] = None
     ):
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = base_url or Config.LLM_BASE_URL
         self.model = model or Config.LLM_MODEL_NAME
+        self.default_temperature = temperature
         
         if not self.api_key:
             raise ValueError("LLM_API_KEY 未配置")
@@ -46,7 +48,7 @@ class LLMClient:
     def chat(
         self,
         messages: List[Dict[str, str]],
-        temperature: float = 0.7,
+        temperature: Optional[float] = None,
         max_tokens: int = 4096,
         response_format: Optional[Dict] = None
     ) -> str:
@@ -65,7 +67,7 @@ class LLMClient:
         kwargs = {
             "model": self.model,
             "messages": messages,
-            "temperature": temperature,
+            "temperature": temperature if temperature is not None else (self.default_temperature or 0.7),
             "max_tokens": max_tokens,
         }
         

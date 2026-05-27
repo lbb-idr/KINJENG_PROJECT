@@ -54,6 +54,9 @@ class SimulationState:
     # 状态
     status: SimulationStatus = SimulationStatus.CREATED
     
+    # 模拟类型
+    sim_type: str = "academic"  # academic, political, market, social, custom
+    
     # 准备阶段数据
     entities_count: int = 0
     profiles_count: int = 0
@@ -83,6 +86,7 @@ class SimulationState:
             "graph_id": self.graph_id,
             "enable_twitter": self.enable_twitter,
             "enable_reddit": self.enable_reddit,
+            "sim_type": self.sim_type,
             "status": self.status.value,
             "entities_count": self.entities_count,
             "profiles_count": self.profiles_count,
@@ -103,6 +107,7 @@ class SimulationState:
             "simulation_id": self.simulation_id,
             "project_id": self.project_id,
             "graph_id": self.graph_id,
+            "sim_type": self.sim_type,
             "status": self.status.value,
             "entities_count": self.entities_count,
             "profiles_count": self.profiles_count,
@@ -175,6 +180,7 @@ class SimulationManager:
             enable_twitter=data.get("enable_twitter", True),
             enable_reddit=data.get("enable_reddit", True),
             status=SimulationStatus(data.get("status", "created")),
+            sim_type=data.get("sim_type", "academic"),
             entities_count=data.get("entities_count", 0),
             profiles_count=data.get("profiles_count", 0),
             entity_types=data.get("entity_types", []),
@@ -197,6 +203,7 @@ class SimulationManager:
         graph_id: str,
         enable_twitter: bool = True,
         enable_reddit: bool = True,
+        sim_type: str = "academic",
     ) -> SimulationState:
         """
         创建新的模拟
@@ -206,6 +213,7 @@ class SimulationManager:
             graph_id: Zep图谱ID
             enable_twitter: 是否启用Twitter模拟
             enable_reddit: 是否启用Reddit模拟
+            sim_type: 模拟类型 (academic, political, market, social, custom)
             
         Returns:
             SimulationState
@@ -219,6 +227,7 @@ class SimulationManager:
             graph_id=graph_id,
             enable_twitter=enable_twitter,
             enable_reddit=enable_reddit,
+            sim_type=sim_type,
             status=SimulationStatus.CREATED,
         )
         
@@ -343,7 +352,8 @@ class SimulationManager:
                 graph_id=state.graph_id,  # 传入graph_id用于Zep检索
                 parallel_count=parallel_profile_count,  # 并行生成数量
                 realtime_output_path=realtime_output_path,  # 实时保存路径
-                output_platform=realtime_platform  # 输出格式
+                output_platform=realtime_platform,  # 输出格式
+                sim_type=state.sim_type
             )
             
             state.profiles_count = len(profiles)
@@ -408,7 +418,8 @@ class SimulationManager:
                 document_text=document_text,
                 entities=filtered.entities,
                 enable_twitter=state.enable_twitter,
-                enable_reddit=state.enable_reddit
+                enable_reddit=state.enable_reddit,
+                sim_type=state.sim_type
             )
             
             if progress_callback:

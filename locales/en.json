@@ -79,7 +79,7 @@
     "layoutGraph": "Graph",
     "layoutSplit": "Split",
     "layoutWorkbench": "Workbench",
-    "stepNames": ["Graph Build", "Env Setup", "Run Simulation", "Report Generation", "Deep Interaction"],
+    "stepNames": ["Graph Build", "Env Setup", "Run Simulation", "Report Generation", "Survey Results"],
     "toggleTheme": "Toggle theme"
   },
   "step1": {

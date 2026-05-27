@@ -382,6 +382,55 @@ class IPCHandler:
             return True
 
 
+async def seed_follow_graph(env, agent_graph, db_path, config, platform_label="twitter"):
+    """Seed dense follower graph into OASIS SQLite database after env.reset()."""
+    try:
+        if not os.path.exists(db_path):
+            return
+        agent_configs = config.get("agent_configs", [])
+        all_agent_ids = [cfg.get("agent_id") for cfg in agent_configs if cfg.get("agent_id") is not None]
+        if len(all_agent_ids) < 3:
+            return
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, agent_id FROM user")
+        user_rows = cursor.fetchall()
+        if not user_rows:
+            conn.close()
+            return
+        agent_to_user = {}
+        cursor.execute("SELECT MAX(edge_id) FROM edge")
+        max_edge = cursor.fetchone()[0] or 0
+        cursor.execute("SELECT MAX(follow_id) FROM follow")
+        max_follow = cursor.fetchone()[0] or 0
+        edge_id = max_edge + 1
+        follow_id = max_follow + 1
+        total_edges = 0
+        for user_id, agent_id in user_rows:
+            if agent_id is not None:
+                agent_to_user[agent_id] = user_id
+        for agent_id, user_id in agent_to_user.items():
+            potential_targets = [uid for aid, uid in agent_to_user.items() if aid != agent_id]
+            if not potential_targets:
+                continue
+            n_follows = min(random.randint(10, 20), len(potential_targets))
+            targets = random.sample(potential_targets, n_follows)
+            for target_user_id in targets:
+                try:
+                    cursor.execute("INSERT INTO follow (follow_id, follower_id, followee_id, created_at) VALUES (?, ?, ?, datetime('now'))", (follow_id, user_id, target_user_id))
+                    cursor.execute("INSERT INTO edge (edge_id, user_id, target_id, edge_type, created_at) VALUES (?, ?, ?, 'follow', datetime('now'))", (edge_id, user_id, target_user_id))
+                    follow_id += 1
+                    edge_id += 1
+                    total_edges += 1
+                except Exception:
+                    pass
+        conn.commit()
+        conn.close()
+        print(f"[{platform_label}] Seeded follow graph: {total_edges} edges for {len(agent_to_user)} agents")
+    except Exception as e:
+        print(f"[{platform_label}] Follow seeding non-critical: {e}")
+
+
 class TwitterSimulationRunner:
     """Twitter模拟运行器"""
     
@@ -599,6 +648,9 @@ class TwitterSimulationRunner:
         await self.env.reset()
         print("环境初始化完成\n")
         
+        # C2: Seed follower graph
+        await seed_follow_graph(self.env, self.agent_graph, db_path, self.config, "twitter")
+        
         # 初始化IPC处理器
         self.ipc_handler = IPCHandler(self.simulation_dir, self.env, self.agent_graph)
         self.ipc_handler.update_status("running")
@@ -644,14 +696,14 @@ class TwitterSimulationRunner:
             if not active_agents:
                 continue
             
-            # 构建动作
-            actions = {
-                agent: LLMAction()
-                for _, agent in active_agents
-            }
-            
-            # 执行动作
-            await self.env.step(actions)
+            # C3: Sequential mini-rounds — split into batches of 3-5
+            mini_batch_size = random.randint(3, 5)
+            all_active = active_agents.copy()
+            random.shuffle(all_active)
+            for batch_start in range(0, len(all_active), mini_batch_size):
+                batch = all_active[batch_start:batch_start + mini_batch_size]
+                actions = {agent: LLMAction() for _, agent in batch}
+                await self.env.step(actions)
             
             # 打印进度
             if (round_num + 1) % 10 == 0 or round_num == 0:

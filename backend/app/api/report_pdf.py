@@ -22,10 +22,12 @@ def generate_survey_report(project_id: str):
     
     Body (optional):
         survey_config: dict — The original survey config for title/metadata
+        report_data: dict — Step4 report outline {title, summary, sections[]}
     """
     try:
         data = request.get_json(force=True) if request.is_json else {}
         survey_config = data.get('survey_config')
+        report_data = data.get('report_data')
 
         results = SurveyResultStore.load(project_id)
         if results is None:
@@ -37,7 +39,8 @@ def generate_survey_report(project_id: str):
             project_id=project_id,
             results=results,
             statistics=statistics,
-            survey_config=survey_config
+            survey_config=survey_config,
+            report_data=report_data
         )
 
         return jsonify({

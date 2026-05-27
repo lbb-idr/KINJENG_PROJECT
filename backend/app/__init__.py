@@ -42,20 +42,15 @@ def create_app(config_class=Config):
     # 启用CORS
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     
-    # 注册模拟进程清理函数（确保服务器关闭时终止所有模拟进程）
+    # Register cleanup on server shutdown (keep)
     from .services.simulation_runner import SimulationRunner
     SimulationRunner.register_cleanup()
-    SimulationRunner.start_cleanup_thread()
     if should_log_startup:
-        logger.info("已注册模拟进程清理函数 + heartbeat cleanup thread")
+        logger.info("已注册模拟进程清理函数")
     
-    # Idle shutdown: backend mati otomatis 5 menit setelah aktivitas terakhir
-    from .api.system import touch, start_idle_shutdown
-    start_idle_shutdown()
-    if should_log_startup:
-        logger.info("Idle shutdown monitor started (5 min timeout)")
-    
-    # 请求日志 + aktivitas tracker
+    # Request log (keep touch for /health endpoint timestamp, no auto-shutdown)
+    from .api.system import touch
+
     @app.before_request
     def before_request():
         touch()

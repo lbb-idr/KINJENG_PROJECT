@@ -507,6 +507,10 @@ class ZepToolsService:
         """
         logger.info(t("console.graphSearch", graphId=graph_id, query=query[:50]))
         
+        # Local mode — skip Zep, langsung fallback
+        if self.client is None:
+            return self._local_search(graph_id, query, limit, scope)
+        
         # 尝试使用Zep Cloud Search API
         try:
             search_results = self._call_with_retry(

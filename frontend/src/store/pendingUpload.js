@@ -33,6 +33,13 @@ export function clearPendingUpload() {
   state.files = []
   state.simulationRequirement = ''
   state.isPending = false
+  // Jangan reset simulationType dan surveyParams — masih dipakai Step 2-5
+}
+
+export function clearAll() {
+  state.files = []
+  state.simulationRequirement = ''
+  state.isPending = false
   state.simulationType = null
   state.surveyParams = { agentCount: 500, maxRounds: 10, platform: 'both', likertScale: 5 }
 }

@@ -1090,6 +1090,118 @@ def get_active_agents_for_round(
     return active_agents
 
 
+async def seed_follow_graph(
+    env,
+    agent_graph,
+    db_path: str,
+    agent_names: Dict[int, str],
+    config: Dict[str, Any],
+    action_logger: Optional[PlatformActionLogger] = None,
+    platform_label: str = "twitter"
+):
+    """
+    Seed a dense follower graph into the database after env.reset().
+    
+    Each agent follows 10-20 random other agents to create a highly
+    connected social graph, increasing content visibility and interaction.
+    
+    Works by directly inserting into the OASIS SQLite 'follow' and 'edge' tables.
+    """
+    try:
+        if not os.path.exists(db_path):
+            logger = logging.getLogger(__name__)
+            logger.warning(f"[{platform_label}] DB not found for follow seeding: {db_path}")
+            return
+        
+        agent_configs = config.get("agent_configs", [])
+        all_agent_ids = [cfg.get("agent_id") for cfg in agent_configs if cfg.get("agent_id") is not None]
+        if len(all_agent_ids) < 3:
+            return
+        
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Get user_id mapping from OASIS user table
+        cursor.execute("SELECT user_id, agent_id FROM user")
+        user_rows = cursor.fetchall()
+        
+        if not user_rows:
+            conn.close()
+            return
+        
+        # Build agent_id -> user_id mapping
+        agent_to_user = {}
+        # Also check the edge table for existing relationships
+        cursor.execute("SELECT MAX(edge_id) FROM edge")
+        max_edge = cursor.fetchone()[0] or 0
+        
+        cursor.execute("SELECT MAX(follow_id) FROM follow")
+        max_follow = cursor.fetchone()[0] or 0
+        
+        edge_id = max_edge + 1
+        follow_id = max_follow + 1
+        total_edges = 0
+        
+        for user_id, agent_id in user_rows:
+            if agent_id is not None:
+                agent_to_user[agent_id] = user_id
+        
+        # Each agent follows 10-20 random other agents
+        for agent_id, user_id in agent_to_user.items():
+            potential_targets = [uid for aid, uid in agent_to_user.items() if aid != agent_id]
+            if not potential_targets:
+                continue
+            
+            n_follows = min(random.randint(10, 20), len(potential_targets))
+            targets = random.sample(potential_targets, n_follows)
+            
+            for target_user_id in targets:
+                try:
+                    # Insert into follow table
+                    cursor.execute("""
+                        INSERT INTO follow (follow_id, follower_id, followee_id, created_at)
+                        VALUES (?, ?, ?, datetime('now'))
+                    """, (follow_id, user_id, target_user_id))
+                    
+                    # Insert into edge table (OASIS tracks relationships here)
+                    cursor.execute("""
+                        INSERT INTO edge (edge_id, user_id, target_id, edge_type, created_at)
+                        VALUES (?, ?, ?, 'follow', datetime('now'))
+                    """, (edge_id, user_id, target_user_id))
+                    
+                    if action_logger:
+                        agent_name = agent_names.get(agent_id, f"Agent_{agent_id}")
+                        target_name = agent_names.get(
+                            next((aid for aid, uid in agent_to_user.items() if uid == target_user_id), None),
+                            f"User_{target_user_id}"
+                        )
+                        action_logger.log_action(
+                            round_num=0,
+                            agent_id=agent_id,
+                            agent_name=agent_name,
+                            action_type="FOLLOW",
+                            action_args={"target_user_name": target_name, "follow_id": follow_id}
+                        )
+                    
+                    follow_id += 1
+                    edge_id += 1
+                    total_edges += 1
+                    
+                except Exception as e:
+                    pass  # Skip duplicate follows
+        
+        conn.commit()
+        conn.close()
+        
+        log = logging.getLogger(__name__)
+        log.info(f"[{platform_label}] Seeded {total_edges} follow relationships for {len(agent_to_user)} agents")
+        print(f"[{platform_label}] Seeded follow graph: {total_edges} edges for {len(agent_to_user)} agents")
+        
+    except Exception as e:
+        log = logging.getLogger(__name__)
+        log.warning(f"[{platform_label}] Follow seeding failed (non-critical): {e}")
+
+
 class PlatformSimulation:
     """平台模拟结果容器"""
     def __init__(self):
@@ -1210,6 +1322,17 @@ async def run_twitter_simulation(
     if action_logger:
         action_logger.log_round_end(0, initial_action_count)
     
+    # ===== Seed follower graph (C2) =====
+    await seed_follow_graph(
+        env=result.env,
+        agent_graph=result.agent_graph,
+        db_path=db_path,
+        agent_names=agent_names,
+        config=config,
+        action_logger=action_logger,
+        platform_label="twitter"
+    )
+    
     # 主模拟循环
     time_config = config.get("time_config", {})
     total_hours = time_config.get("total_simulation_hours", 72)
@@ -1250,26 +1373,33 @@ async def run_twitter_simulation(
                 action_logger.log_round_end(round_num + 1, 0)
             continue
         
-        actions = {agent: LLMAction() for _, agent in active_agents}
-        await result.env.step(actions)
-        
-        # 从数据库获取实际执行的动作并记录
-        actual_actions, last_rowid = fetch_new_actions_from_db(
-            db_path, last_rowid, agent_names
-        )
-        
+        # C3: Sequential mini-rounds — split active agents into batches of 3-5
+        mini_batch_size = random.randint(3, 5)
+        all_active = active_agents.copy()
+        random.shuffle(all_active)
         round_action_count = 0
-        for action_data in actual_actions:
-            if action_logger:
-                action_logger.log_action(
-                    round_num=round_num + 1,
-                    agent_id=action_data['agent_id'],
-                    agent_name=action_data['agent_name'],
-                    action_type=action_data['action_type'],
-                    action_args=action_data['action_args']
-                )
-                total_actions += 1
-                round_action_count += 1
+        
+        for batch_start in range(0, len(all_active), mini_batch_size):
+            batch = all_active[batch_start:batch_start + mini_batch_size]
+            actions = {agent: LLMAction() for _, agent in batch}
+            await result.env.step(actions)
+            
+            # 每批结束后fetch actions，确保粒度高
+            batch_actions, last_rowid = fetch_new_actions_from_db(
+                db_path, last_rowid, agent_names
+            )
+            
+            for action_data in batch_actions:
+                if action_logger:
+                    action_logger.log_action(
+                        round_num=round_num + 1,
+                        agent_id=action_data['agent_id'],
+                        agent_name=action_data['agent_name'],
+                        action_type=action_data['action_type'],
+                        action_args=action_data['action_args']
+                    )
+                    total_actions += 1
+                    round_action_count += 1
         
         if action_logger:
             action_logger.log_round_end(round_num + 1, round_action_count)
@@ -1409,6 +1539,17 @@ async def run_reddit_simulation(
     if action_logger:
         action_logger.log_round_end(0, initial_action_count)
     
+    # ===== Seed follower graph (C2) =====
+    await seed_follow_graph(
+        env=result.env,
+        agent_graph=result.agent_graph,
+        db_path=db_path,
+        agent_names=agent_names,
+        config=config,
+        action_logger=action_logger,
+        platform_label="reddit"
+    )
+    
     # 主模拟循环
     time_config = config.get("time_config", {})
     total_hours = time_config.get("total_simulation_hours", 72)
@@ -1449,26 +1590,33 @@ async def run_reddit_simulation(
                 action_logger.log_round_end(round_num + 1, 0)
             continue
         
-        actions = {agent: LLMAction() for _, agent in active_agents}
-        await result.env.step(actions)
-        
-        # 从数据库获取实际执行的动作并记录
-        actual_actions, last_rowid = fetch_new_actions_from_db(
-            db_path, last_rowid, agent_names
-        )
-        
+        # C3: Sequential mini-rounds — split active agents into batches of 3-5
+        mini_batch_size = random.randint(3, 5)
+        all_active = active_agents.copy()
+        random.shuffle(all_active)
         round_action_count = 0
-        for action_data in actual_actions:
-            if action_logger:
-                action_logger.log_action(
-                    round_num=round_num + 1,
-                    agent_id=action_data['agent_id'],
-                    agent_name=action_data['agent_name'],
-                    action_type=action_data['action_type'],
-                    action_args=action_data['action_args']
-                )
-                total_actions += 1
-                round_action_count += 1
+        
+        for batch_start in range(0, len(all_active), mini_batch_size):
+            batch = all_active[batch_start:batch_start + mini_batch_size]
+            actions = {agent: LLMAction() for _, agent in batch}
+            await result.env.step(actions)
+            
+            # 每批结束后fetch actions，确保粒度高
+            batch_actions, last_rowid = fetch_new_actions_from_db(
+                db_path, last_rowid, agent_names
+            )
+            
+            for action_data in batch_actions:
+                if action_logger:
+                    action_logger.log_action(
+                        round_num=round_num + 1,
+                        agent_id=action_data['agent_id'],
+                        agent_name=action_data['agent_name'],
+                        action_type=action_data['action_type'],
+                        action_args=action_data['action_args']
+                    )
+                    total_actions += 1
+                    round_action_count += 1
         
         if action_logger:
             action_logger.log_round_end(round_num + 1, round_action_count)

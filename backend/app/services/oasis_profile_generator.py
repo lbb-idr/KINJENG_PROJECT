@@ -50,6 +50,12 @@ class OasisAgentProfile:
     profession: Optional[str] = None
     interested_topics: List[str] = field(default_factory=list)
     
+    # Field baru untuk profil lebih realistis
+    education_level: Optional[str] = None
+    iq_level: Optional[str] = None
+    cognitive_style: Optional[str] = None
+    knowledge_level: Optional[str] = None
+    
     # 来源实体信息
     source_entity_uuid: Optional[str] = None
     source_entity_type: Optional[str] = None
@@ -81,6 +87,14 @@ class OasisAgentProfile:
             profile["profession"] = self.profession
         if self.interested_topics:
             profile["interested_topics"] = self.interested_topics
+        if self.education_level:
+            profile["education_level"] = self.education_level
+        if self.iq_level:
+            profile["iq_level"] = self.iq_level
+        if self.cognitive_style:
+            profile["cognitive_style"] = self.cognitive_style
+        if self.knowledge_level:
+            profile["knowledge_level"] = self.knowledge_level
         
         return profile
     
@@ -111,6 +125,14 @@ class OasisAgentProfile:
             profile["profession"] = self.profession
         if self.interested_topics:
             profile["interested_topics"] = self.interested_topics
+        if self.education_level:
+            profile["education_level"] = self.education_level
+        if self.iq_level:
+            profile["iq_level"] = self.iq_level
+        if self.cognitive_style:
+            profile["cognitive_style"] = self.cognitive_style
+        if self.knowledge_level:
+            profile["knowledge_level"] = self.knowledge_level
         
         return profile
     
@@ -132,6 +154,10 @@ class OasisAgentProfile:
             "country": self.country,
             "profession": self.profession,
             "interested_topics": self.interested_topics,
+            "education_level": self.education_level,
+            "iq_level": self.iq_level,
+            "cognitive_style": self.cognitive_style,
+            "knowledge_level": self.knowledge_level,
             "source_entity_uuid": self.source_entity_uuid,
             "source_entity_type": self.source_entity_type,
             "created_at": self.created_at,
@@ -212,7 +238,8 @@ class OasisProfileGenerator:
         self, 
         entity: EntityNode, 
         user_id: int,
-        use_llm: bool = True
+        use_llm: bool = True,
+        sim_type: str = "academic"
     ) -> OasisAgentProfile:
         """
         从Zep实体生成OASIS Agent Profile
@@ -241,7 +268,8 @@ class OasisProfileGenerator:
                 entity_type=entity_type,
                 entity_summary=entity.summary,
                 entity_attributes=entity.attributes,
-                context=context
+                context=context,
+                sim_type=sim_type
             )
         else:
             # 使用规则生成基础人设
@@ -268,6 +296,10 @@ class OasisProfileGenerator:
             country=profile_data.get("country"),
             profession=profile_data.get("profession"),
             interested_topics=profile_data.get("interested_topics", []),
+            education_level=profile_data.get("education_level"),
+            iq_level=profile_data.get("iq_level"),
+            cognitive_style=profile_data.get("cognitive_style"),
+            knowledge_level=profile_data.get("knowledge_level"),
             source_entity_uuid=entity.uuid,
             source_entity_type=entity_type,
         )
@@ -493,13 +525,25 @@ class OasisProfileGenerator:
         """判断是否是群体/机构类型实体"""
         return entity_type.lower() in self.GROUP_ENTITY_TYPES
     
+    def _get_sim_type_prompt_context(self, sim_type: str) -> str:
+        """Dapatkan konteks tambahan berdasarkan tipe simulasi untuk prompt profil"""
+        contexts = {
+            "academic": "Konteks simulasi akademik: Fokus pada riset, publikasi, dan diskusi ilmiah. Profile agen harus mencerminkan latar belakang akademik: gelar, afiliasi universitas/riset, minat penelitian, publikasi, dan pengalaman mengajar/riset.",
+            "political": "Konteks simulasi politik: Fokus pada opini publik dan dinamika politik. Profile agen harus mencerminkan afiliasi politik: preferensi partai, ideologi, aktivisme politik, pengalaman organisasi politik/kampanye, dan isu-isu sosial yang diperjuangkan.",
+            "market": "Konteks simulasi pasar: Fokus pada perilaku konsumen dan tren bisnis. Profile agen harus mencerminkan peran ekonomi: profesi, kebiasaan konsumsi, preferensi merek, perilaku belanja, dan pengaruh sebagai konsumen.",
+            "social": "Konteks simulasi sosial: Fokus pada interaksi sosial dan isu kemasyarakatan. Profile agen harus mencerminkan latar belakang sosial yang beragam: komunitas, hobi, kegiatan sosial, jaringan pertemanan, dan peran dalam masyarakat.",
+            "custom": "Konteks simulasi kustom: Profile agen mengikuti kebutuhan spesifik pengguna seperti yang didefinisikan dalam kebutuhan simulasi."
+        }
+        return contexts.get(sim_type, "")
+    
     def _generate_profile_with_llm(
         self,
         entity_name: str,
         entity_type: str,
         entity_summary: str,
         entity_attributes: Dict[str, Any],
-        context: str
+        context: str,
+        sim_type: str = "academic"
     ) -> Dict[str, Any]:
         """
         使用LLM生成非常详细的人设
@@ -511,13 +555,17 @@ class OasisProfileGenerator:
         
         is_individual = self._is_individual_entity(entity_type)
         
+        sim_type_context = self._get_sim_type_prompt_context(sim_type)
+        
         if is_individual:
             prompt = self._build_individual_persona_prompt(
-                entity_name, entity_type, entity_summary, entity_attributes, context
+                entity_name, entity_type, entity_summary, entity_attributes, context,
+                sim_type_context=sim_type_context
             )
         else:
             prompt = self._build_group_persona_prompt(
-                entity_name, entity_type, entity_summary, entity_attributes, context
+                entity_name, entity_type, entity_summary, entity_attributes, context,
+                sim_type_context=sim_type_context
             )
 
         # 尝试多次生成，直到成功或达到最大重试次数
@@ -528,7 +576,7 @@ class OasisProfileGenerator:
             try:
                 content = self.llm.chat(
                     messages=[
-                        {"role": "system", "content": self._get_system_prompt(is_individual)},
+                        {"role": "system", "content": self._get_system_prompt(is_individual, sim_type)},
                         {"role": "user", "content": prompt}
                     ],
                     response_format={"type": "json_object"},
@@ -658,9 +706,12 @@ class OasisProfileGenerator:
             "persona": entity_summary or f"{entity_name}是一个{entity_type}。"
         }
     
-    def _get_system_prompt(self, is_individual: bool) -> str:
+    def _get_system_prompt(self, is_individual: bool, sim_type: str = "academic") -> str:
         """获取系统提示词"""
         base_prompt = "你是社交媒体用户画像生成专家。生成详细、真实的人设用于舆论模拟,最大程度还原已有现实情况。必须返回有效的JSON格式，所有字符串值不能包含未转义的换行符。"
+        sim_type_info = self._get_sim_type_prompt_context(sim_type)
+        if sim_type_info:
+            base_prompt = f"{base_prompt}\n\n{sim_type_info}"
         return f"{base_prompt}\n\n{get_language_instruction()}"
     
     def _build_individual_persona_prompt(
@@ -669,14 +720,17 @@ class OasisProfileGenerator:
         entity_type: str,
         entity_summary: str,
         entity_attributes: Dict[str, Any],
-        context: str
+        context: str,
+        sim_type_context: str = ""
     ) -> str:
         """构建个人实体的详细人设提示词"""
         
         attrs_str = json.dumps(entity_attributes, ensure_ascii=False) if entity_attributes else "无"
         context_str = context[:3000] if context else "无额外上下文"
+        sim_type_info = f"\n\n### Konteks Tipe Simulasi\n{sim_type_context}" if sim_type_context else ""
         
-        return f"""为实体生成详细的社交媒体用户人设,最大程度还原已有现实情况。
+        return f"""{sim_type_info}
+为实体生成详细的社交媒体用户人设,最大程度还原已有现实情况。
 
 实体名称: {entity_name}
 实体类型: {entity_type}
@@ -695,6 +749,9 @@ class OasisProfileGenerator:
    - 性格特征（MBTI类型、核心性格、情绪表达方式）
    - 社交媒体行为（发帖频率、内容偏好、互动风格、语言特点）
    - 立场观点（对话题的态度、可能被激怒/感动的内容）
+   - 争议性观点（这个人物在公共议题上最可能引发争议的立场）
+   - 情绪触发点（什么内容最容易让这个人情绪化回应）
+   - 辩论风格（理性论证、感性诉诸、讽刺挖苦、数据驱动等）
    - 独特特征（口头禅、特殊经历、个人爱好）
    - 个人记忆（人设的重要部分，要介绍这个个体与事件的关联，以及这个个体在事件中的已有动作与反应）
 3. age: 年龄数字（必须是整数）
@@ -703,6 +760,10 @@ class OasisProfileGenerator:
 6. country: 国家（使用中文，如"中国"）
 7. profession: 职业
 8. interested_topics: 感兴趣话题数组
+9. education_level: 教育程度，如"SD/SMP", "SMA/SMK", "D3", "S1", "S2/S3"
+10. iq_level: 智力水平，如"Sangat Rendah", "Rendah", "Rata-rata", "Tinggi", "Sangat Tinggi"
+11. cognitive_style: 认知风格，如"Analitis", "Intuitif", "Praktis", "Kreatif", "Logis", "Emosional"
+12. knowledge_level: 对模拟主题的知识水平，如"Rendah", "Sedang", "Tinggi", "Ahli"
 
 重要:
 - 所有字段值必须是字符串或数字，不要使用换行符
@@ -718,14 +779,17 @@ class OasisProfileGenerator:
         entity_type: str,
         entity_summary: str,
         entity_attributes: Dict[str, Any],
-        context: str
+        context: str,
+        sim_type_context: str = ""
     ) -> str:
         """构建群体/机构实体的详细人设提示词"""
         
         attrs_str = json.dumps(entity_attributes, ensure_ascii=False) if entity_attributes else "无"
         context_str = context[:3000] if context else "无额外上下文"
+        sim_type_info = f"\n\n### Konteks Tipe Simulasi\n{sim_type_context}" if sim_type_context else ""
         
-        return f"""为机构/群体实体生成详细的社交媒体账号设定,最大程度还原已有现实情况。
+        return f"""{sim_type_info}
+为机构/群体实体生成详细的社交媒体账号设定,最大程度还原已有现实情况。
 
 实体名称: {entity_name}
 实体类型: {entity_type}
@@ -752,6 +816,10 @@ class OasisProfileGenerator:
 6. country: 国家（使用中文，如"中国"）
 7. profession: 机构职能描述
 8. interested_topics: 关注领域数组
+9. education_level: 机构类型，如"Lembaga Riset", "Pemerintahan", "Media", "Pendidikan"
+10. iq_level: 固定填"Rata-rata"（机构账号的智力水平）
+11. cognitive_style: 机构风格，如"Formal", "Informatif", "Netral", "Otoritatif"
+12. knowledge_level: 机构专业水平，如"Ahli"
 
 重要:
 - 所有字段值必须是字符串或数字，不允许null值
@@ -782,6 +850,10 @@ class OasisProfileGenerator:
                 "country": random.choice(self.COUNTRIES),
                 "profession": "Student",
                 "interested_topics": ["Education", "Social Issues", "Technology"],
+                "education_level": random.choice(["SMA/SMK", "D3", "S1"]),
+                "iq_level": random.choice(["Rata-rata", "Tinggi"]),
+                "cognitive_style": random.choice(["Analitis", "Kreatif", "Intuitif", "Praktis"]),
+                "knowledge_level": "Sedang",
             }
         
         elif entity_type_lower in ["publicfigure", "expert", "faculty"]:
@@ -794,6 +866,10 @@ class OasisProfileGenerator:
                 "country": random.choice(self.COUNTRIES),
                 "profession": entity_attributes.get("occupation", "Expert"),
                 "interested_topics": ["Politics", "Economics", "Culture & Society"],
+                "education_level": "S2/S3",
+                "iq_level": random.choice(["Tinggi", "Sangat Tinggi"]),
+                "cognitive_style": random.choice(["Analitis", "Logis", "Praktis"]),
+                "knowledge_level": "Ahli",
             }
         
         elif entity_type_lower in ["mediaoutlet", "socialmediaplatform"]:
@@ -806,6 +882,10 @@ class OasisProfileGenerator:
                 "country": "中国",
                 "profession": "Media",
                 "interested_topics": ["General News", "Current Events", "Public Affairs"],
+                "education_level": "Lembaga Media",
+                "iq_level": "Rata-rata",
+                "cognitive_style": "Informatif",
+                "knowledge_level": "Ahli",
             }
         
         elif entity_type_lower in ["university", "governmentagency", "ngo", "organization"]:
@@ -818,6 +898,10 @@ class OasisProfileGenerator:
                 "country": "中国",
                 "profession": entity_type,
                 "interested_topics": ["Public Policy", "Community", "Official Announcements"],
+                "education_level": "Lembaga",
+                "iq_level": "Rata-rata",
+                "cognitive_style": random.choice(["Formal", "Netral", "Otoritatif"]),
+                "knowledge_level": "Ahli",
             }
         
         else:
@@ -831,6 +915,10 @@ class OasisProfileGenerator:
                 "country": random.choice(self.COUNTRIES),
                 "profession": entity_type,
                 "interested_topics": ["General", "Social Issues"],
+                "education_level": random.choice(["SD/SMP", "SMA/SMK", "D3", "S1"]),
+                "iq_level": random.choice(["Rendah", "Rata-rata", "Tinggi"]),
+                "cognitive_style": random.choice(["Analitis", "Intuitif", "Praktis", "Kreatif", "Logis", "Emosional"]),
+                "knowledge_level": random.choice(["Rendah", "Sedang", "Tinggi"]),
             }
     
     def set_graph_id(self, graph_id: str):
@@ -845,7 +933,8 @@ class OasisProfileGenerator:
         graph_id: Optional[str] = None,
         parallel_count: int = 5,
         realtime_output_path: Optional[str] = None,
-        output_platform: str = "reddit"
+        output_platform: str = "reddit",
+        sim_type: str = "academic"
     ) -> List[OasisAgentProfile]:
         """
         批量从实体生成Agent Profile（支持并行生成）
@@ -917,7 +1006,8 @@ class OasisProfileGenerator:
                 profile = self.generate_profile_from_entity(
                     entity=entity,
                     user_id=idx,
-                    use_llm=use_llm
+                    use_llm=use_llm,
+                    sim_type=sim_type
                 )
                 
                 # 实时输出生成的人设到控制台和日志
@@ -1024,6 +1114,7 @@ class OasisProfileGenerator:
             f"【基本属性】",
             f"年龄: {profile.age} | 性别: {profile.gender} | MBTI: {profile.mbti}",
             f"职业: {profile.profession} | 国家: {profile.country}",
+            f"教育: {profile.education_level} | IQ: {profile.iq_level} | Kognitif: {profile.cognitive_style} | Pengetahuan: {profile.knowledge_level}",
             f"兴趣话题: {topics_str}",
             separator
         ]
@@ -1173,6 +1264,14 @@ class OasisProfileGenerator:
                 item["profession"] = profile.profession
             if profile.interested_topics:
                 item["interested_topics"] = profile.interested_topics
+            if profile.education_level:
+                item["education_level"] = profile.education_level
+            if profile.iq_level:
+                item["iq_level"] = profile.iq_level
+            if profile.cognitive_style:
+                item["cognitive_style"] = profile.cognitive_style
+            if profile.knowledge_level:
+                item["knowledge_level"] = profile.knowledge_level
             
             data.append(item)
         

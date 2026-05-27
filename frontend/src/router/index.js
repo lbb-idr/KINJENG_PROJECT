@@ -59,7 +59,7 @@ const routes = [
     name: 'Interaction',
     component: InteractionView,
     props: true
-  }
+  },
 ]
 
 const router = createRouter({

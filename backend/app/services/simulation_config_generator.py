@@ -240,6 +240,19 @@ class SimulationConfigGenerator:
             model=self.model_name
         )
     
+    SIM_TYPE_CONTEXT = {
+        "academic": "Tipe simulasi akademik: fokus pada riset ilmiah, publikasi, dan diskusi akademik. Partisipan adalah peneliti, akademisi, mahasiswa. Platform utama: forum diskusi ilmiah.",
+        "political": "Tipe simulasi politik: fokus pada opini publik, kebijakan pemerintah, dan dinamika politik. Partisipan adalah politisi, jurnalis, aktivis, warga biasa. Platform utama: media sosial dengan polarisasi tinggi.",
+        "market": "Tipe simulasi pasar: fokus pada perilaku konsumen, tren pasar, dan strategi bisnis. Partisipan adalah konsumen, pebisnis, analis pasar. Platform utama: e-commerce dan forum review.",
+        "social": "Tipe simulasi sosial: fokus pada interaksi sosial, budaya, dan isu-isu kemasyarakatan. Partisipan beragam dari berbagai latar belakang. Platform utama: media sosial umum.",
+        "custom": "Tipe simulasi kustom: mengikuti kebutuhan spesifik pengguna. Partisipan dan platform disesuaikan dengan konteks riset."
+    }
+    
+    def _get_sim_type_prompt_suffix(self) -> str:
+        """Dapatkan deskripsi tipe simulasi untuk ditambahkan ke prompt"""
+        desc = self.SIM_TYPE_CONTEXT.get(self._sim_type, "")
+        return f"\n\n### Konteks Tipe Simulasi\n{desc}\n\nPastikan konfigurasi yang dihasilkan sesuai dengan karakteristik tipe simulasi ini."
+    
     def generate_config(
         self,
         simulation_id: str,
@@ -250,6 +263,7 @@ class SimulationConfigGenerator:
         entities: List[EntityNode],
         enable_twitter: bool = True,
         enable_reddit: bool = True,
+        sim_type: str = "academic",
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
     ) -> SimulationParameters:
         """
@@ -264,12 +278,14 @@ class SimulationConfigGenerator:
             entities: 过滤后的实体列表
             enable_twitter: 是否启用Twitter
             enable_reddit: 是否启用Reddit
+            sim_type: 模拟类型 (academic, political, market, social, custom)
             progress_callback: 进度回调函数(current_step, total_steps, message)
             
         Returns:
             SimulationParameters: 完整的模拟参数
         """
-        logger.info(f"开始智能生成模拟配置: simulation_id={simulation_id}, 实体数={len(entities)}")
+        self._sim_type = sim_type
+        logger.info(f"开始智能生成模拟配置: simulation_id={simulation_id}, tipe={sim_type}, 实体数={len(entities)}")
         
         # 计算总步骤数
         num_batches = math.ceil(len(entities) / self.AGENTS_PER_BATCH)
@@ -389,8 +405,12 @@ class SimulationConfigGenerator:
         # 实体摘要
         entity_summary = self._summarize_entities(entities)
         
+        # 模拟类型上下文
+        sim_type_desc = self.SIM_TYPE_CONTEXT.get(self._sim_type, "")
+        
         # 构建上下文
         context_parts = [
+            f"## Tipe Simulasi\n{sim_type_desc}",
             f"## 模拟需求\n{simulation_requirement}",
             f"\n## 实体信息 ({len(entities)}个)\n{entity_summary}",
         ]
@@ -576,7 +596,7 @@ class SimulationConfigGenerator:
 - reasoning (string): 简要说明为什么这样配置"""
 
         system_prompt = "你是社交媒体模拟专家。返回纯JSON格式，时间配置需符合模拟场景中目标用户群体的作息习惯。"
-        system_prompt = f"{system_prompt}\n\n{get_language_instruction()}"
+        system_prompt = f"{system_prompt}{self._get_sim_type_prompt_suffix()}\n\n{get_language_instruction()}"
 
         try:
             return self._call_llm_with_retry(prompt, system_prompt)
@@ -693,7 +713,7 @@ class SimulationConfigGenerator:
 }}"""
 
         system_prompt = "你是舆论分析专家。返回纯JSON格式。注意 poster_type 必须精确匹配可用实体类型。"
-        system_prompt = f"{system_prompt}\n\n{get_language_instruction()}\nIMPORTANT: The 'poster_type' field value MUST be in English PascalCase exactly matching the available entity types. Only 'content', 'narrative_direction', 'hot_topics' and 'reasoning' fields should use the specified language."
+        system_prompt = f"{system_prompt}{self._get_sim_type_prompt_suffix()}\n\n{get_language_instruction()}\nIMPORTANT: The 'poster_type' field value MUST be in English PascalCase exactly matching the available entity types. Only 'content', 'narrative_direction', 'hot_topics' and 'reasoning' fields should use the specified language."
 
         try:
             return self._call_llm_with_retry(prompt, system_prompt)
@@ -857,7 +877,7 @@ class SimulationConfigGenerator:
 }}"""
 
         system_prompt = "你是社交媒体行为分析专家。返回纯JSON，配置需符合模拟场景中目标用户群体的作息习惯。"
-        system_prompt = f"{system_prompt}\n\n{get_language_instruction()}\nIMPORTANT: The 'stance' field value MUST be one of the English strings: 'supportive', 'opposing', 'neutral', 'observer'. All JSON field names and numeric values must remain unchanged. Only natural language text fields should use the specified language."
+        system_prompt = f"{system_prompt}{self._get_sim_type_prompt_suffix()}\n\n{get_language_instruction()}\nIMPORTANT: The 'stance' field value MUST be one of the English strings: 'supportive', 'opposing', 'neutral', 'observer'. All JSON field names and numeric values must remain unchanged. Only natural language text fields should use the specified language."
 
         try:
             result = self._call_llm_with_retry(prompt, system_prompt)

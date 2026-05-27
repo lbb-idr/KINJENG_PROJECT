@@ -128,8 +128,8 @@
           </div>
 
           <!-- Next Step Button - 在完成后显示 -->
-          <button v-if="isComplete" class="next-step-btn" @click="goToInteraction">
-            <span>{{ $t('step4.goToInteraction') }}</span>
+          <button v-if="isComplete" class="next-step-btn" @click="goToSurveyResults">
+            <span>{{ $t('step4.goToSurveyResults') || '📊 Lihat Hasil Survei →' }}</span>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="5" y1="12" x2="19" y2="12"></line>
               <polyline points="12 5 19 12 12 19"></polyline>
@@ -407,9 +407,9 @@ const props = defineProps({
 const emit = defineEmits(['add-log', 'update-status'])
 
 // Navigation
-const goToInteraction = () => {
+const goToSurveyResults = () => {
   if (props.reportId) {
-    router.push({ name: 'Interaction', params: { reportId: props.reportId } })
+    router.push({ name: 'SurveyResults', query: { reportId: props.reportId } })
   }
 }
 
@@ -2062,6 +2062,14 @@ const fetchAgentLog = async () => {
           
           if (log.action === 'report_start') {
             startTime.value = new Date(log.timestamp)
+          }
+          
+          // error/report_error — agent gagal, jangan biarkan polling terus
+          if (log.action === 'error' || log.action === 'report_error') {
+            isComplete.value = true
+            currentSectionIndex.value = null
+            emit('update-status', 'error')
+            stopPolling()
           }
         })
         

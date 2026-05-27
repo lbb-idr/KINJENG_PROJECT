@@ -191,6 +191,7 @@ import { computed, ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { createSimulation } from '../api/simulation'
+import pendingUpload from '../store/pendingUpload'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -220,11 +221,13 @@ const handleEnterEnvSetup = async () => {
   creatingSimulation.value = true
   
   try {
+    const simType = pendingUpload.simulationType || 'academic'
     const res = await createSimulation({
       project_id: props.projectData.project_id,
       graph_id: props.projectData.graph_id,
       enable_twitter: true,
-      enable_reddit: true
+      enable_reddit: true,
+      sim_type: simType
     })
     
     if (res.success && res.data?.simulation_id) {

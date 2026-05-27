@@ -673,8 +673,16 @@ let lastLoggedProfileCount = 0
 let lastLoggedConfigStage = ''
 
 // 模拟轮数配置
-const useCustomRounds = ref(false) // 默认使用自动配置轮数
-const customMaxRounds = ref(props.initialRounds || 40)   // 默认推荐40轮, kl udah dipilih di awal ikut preferensi user
+const useCustomRounds = ref(!!props.initialRounds) // kalau user sudah pilih di awal, aktifkan custom mode
+const customMaxRounds = ref(props.initialRounds || 40)   // ikut preferensi user dari Step 1, fallback 40
+
+// Sinkron jika prop berubah (misal dari load project)
+watch(() => props.initialRounds, (val) => {
+  if (val) {
+    useCustomRounds.value = true
+    customMaxRounds.value = val
+  }
+})
 
 // Watch stage to update phase
 watch(currentStage, (newStage) => {

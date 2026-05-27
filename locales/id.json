@@ -79,7 +79,7 @@
     "layoutGraph": "Graf",
     "layoutSplit": "Terpisah",
     "layoutWorkbench": "Meja Kerja",
-    "stepNames": ["Bangun Graf", "Atur Lingkungan", "Jalankan Simulasi", "Buat Laporan", "Interaksi"],
+    "stepNames": ["Bangun Graf", "Atur Lingkungan", "Jalankan Simulasi", "Buat Laporan", "Hasil Survei"],
     "toggleTheme": "Ganti tema"
   },
   "simType": {

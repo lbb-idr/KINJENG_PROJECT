@@ -589,6 +589,8 @@ PLAN_SYSTEM_PROMPT = """\
 注意：sections数组最少2个，最多5个元素！"""
 
 PLAN_USER_PROMPT_TEMPLATE = """\
+{language_instruction}
+
 【预测场景设定】
 我们向模拟世界注入的变量（模拟需求）：{simulation_requirement}
 
@@ -767,6 +769,8 @@ SECTION_SYSTEM_PROMPT_TEMPLATE = """\
 7. 【再次强调】不要添加任何标题！用**粗体**代替小节标题"""
 
 SECTION_USER_PROMPT_TEMPLATE = """\
+{language_instruction}
+
 已完成的章节内容（请仔细阅读，避免重复）：
 {previous_content}
 
@@ -1163,8 +1167,11 @@ class ReportAgent:
         if progress_callback:
             progress_callback("planning", 30, t('progress.generatingOutline'))
         
-        system_prompt = f"{PLAN_SYSTEM_PROMPT}\n\n{get_language_instruction()}"
+        system_prompt = f"{get_language_instruction()}\n\n{PLAN_SYSTEM_PROMPT}"
+        lang_instr = get_language_instruction()
+        system_prompt = f"{lang_instr}\n\n{PLAN_SYSTEM_PROMPT}"
         user_prompt = PLAN_USER_PROMPT_TEMPLATE.format(
+            language_instruction=lang_instr,
             simulation_requirement=self.simulation_requirement,
             total_nodes=context.get('graph_statistics', {}).get('total_nodes', 0),
             total_edges=context.get('graph_statistics', {}).get('total_edges', 0),
@@ -1209,12 +1216,12 @@ class ReportAgent:
             logger.error(t('report.outlinePlanFailed', error=str(e)))
             # 返回默认大纲（3个章节，作为fallback）
             return ReportOutline(
-                title="未来预测报告",
-                summary="基于模拟预测的未来趋势与风险分析",
+                title="Laporan Prediksi Simulasi",
+                summary="Analisis tren masa depan dan risiko berdasarkan prediksi simulasi.",
                 sections=[
-                    ReportSection(title="预测场景与核心发现"),
-                    ReportSection(title="人群行为预测分析"),
-                    ReportSection(title="趋势展望与风险提示")
+                    ReportSection(title="Skenario Prediksi dan Temuan Inti"),
+                    ReportSection(title="Analisis Perilaku Populasi"),
+                    ReportSection(title="Prospek Tren dan Peringatan Risiko")
                 ]
             )
     
@@ -1259,7 +1266,7 @@ class ReportAgent:
             section_title=section.title,
             tools_description=self._get_tools_description(),
         )
-        system_prompt = f"{system_prompt}\n\n{get_language_instruction()}"
+        system_prompt = f"{get_language_instruction()}\n\n{system_prompt}"
 
         # 构建用户prompt - 每个已完成章节各传入最大4000字
         if previous_sections:
@@ -1273,6 +1280,7 @@ class ReportAgent:
             previous_content = "（这是第一个章节）"
         
         user_prompt = SECTION_USER_PROMPT_TEMPLATE.format(
+            language_instruction=get_language_instruction(),
             previous_content=previous_content,
             section_title=section.title,
         )
@@ -1805,7 +1813,7 @@ class ReportAgent:
             report_content=report_content if report_content else "（暂无报告）",
             tools_description=self._get_tools_description(),
         )
-        system_prompt = f"{system_prompt}\n\n{get_language_instruction()}"
+        system_prompt = f"{get_language_instruction()}\n\n{system_prompt}"
 
         # 构建消息
         messages = [{"role": "system", "content": system_prompt}]

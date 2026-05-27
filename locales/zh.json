@@ -79,7 +79,7 @@
     "layoutGraph": "图谱",
     "layoutSplit": "双栏",
     "layoutWorkbench": "工作台",
-    "stepNames": ["图谱构建", "环境搭建", "开始模拟", "报告生成", "深度互动"],
+    "stepNames": ["图谱构建", "环境搭建", "开始模拟", "报告生成", "调查结果"],
     "toggleTheme": "切换主题"
   },
   "step1": {

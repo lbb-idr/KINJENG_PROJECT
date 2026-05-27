@@ -123,7 +123,7 @@ PEDOMAN:
 4. Pertanyaan mcq WAJIB punya field "options" (array string)
 5. Pertanyaan open WAJIB punya field "max_length" (number)
 6. Gunakan bahasa Indonesia yang baik dan benar
-7. Pertanyaan harus relevan dengan topik riset
+7. PENTING: Setiap pertanyaan WAJIB menyebut topik riset secara eksplisit, jangan pakai kata "ini", "tersebut", atau "topik ini". Contoh: alih-alih "Apakah Anda setuju dengan kebijakan ini?", tulis "Apakah Anda setuju dengan kebijakan kenaikan PPN 12%?"
 8. Ikuti kaidah metodologi survei akademik"""
 
         try:
@@ -131,7 +131,7 @@ PEDOMAN:
             response = llm.chat(
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Buat survei untuk riset: {requirement}"}
+                    {"role": "user", "content": f"Buat survei spesifik tentang '{requirement}'. Setiap pertanyaan harus menyebut topik ini secara langsung, jangan pakai kata ganti 'ini' atau 'tersebut'."}
                 ],
                 response_format={"type": "json_object"}
             )

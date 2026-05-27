@@ -24,14 +24,8 @@
         <LanguageSwitcher />
         <div class="step-divider"></div>
         <div class="workflow-step">
-          <span class="step-num">Langkah 5/5</span>
-          <span class="step-name">{{ $tm('main.stepNames')[4] }}</span>
+          <span class="step-name">Interaksi</span>
         </div>
-        <div class="step-divider"></div>
-        <span class="status-indicator" :class="statusClass">
-          <span class="dot"></span>
-          {{ statusText }}
-        </span>
       </div>
     </header>
 

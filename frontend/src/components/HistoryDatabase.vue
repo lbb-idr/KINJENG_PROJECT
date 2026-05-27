@@ -32,21 +32,24 @@
         <!-- 卡片头部：simulation_id 和 功能可用状态 -->
         <div class="card-header">
           <span class="card-id">{{ formatSimulationId(project.simulation_id) }}</span>
-          <div class="card-status-icons">
-            <span 
-              class="status-icon" 
-              :class="{ available: project.project_id, unavailable: !project.project_id }"
-              :title="$t('history.graphBuild')"
-            >◇</span>
-            <span 
-              class="status-icon available" 
-              :title="$t('history.envSetup')"
-            >◈</span>
-            <span 
-              class="status-icon" 
-              :class="{ available: project.report_id, unavailable: !project.report_id }"
-              :title="$t('history.analysisReport')"
-            >◆</span>
+          <div class="card-header-right">
+            <div class="card-status-icons">
+              <span 
+                class="status-icon" 
+                :class="{ available: project.project_id, unavailable: !project.project_id }"
+                :title="$t('history.graphBuild')"
+              >◇</span>
+              <span 
+                class="status-icon available" 
+                :title="$t('history.envSetup')"
+              >◈</span>
+              <span 
+                class="status-icon" 
+                :class="{ available: project.report_id, unavailable: !project.report_id }"
+                :title="$t('history.analysisReport')"
+              >◆</span>
+            </div>
+            <button class="btn-delete-sim" @click.stop="confirmDeleteSim(project)" title="Hapus simulasi">✕</button>
           </div>
         </div>
 
@@ -382,6 +385,22 @@ const getFileTypeLabel = (filename) => {
   return ext || 'FILE'
 }
 
+// Hapus simulasi
+const confirmDeleteSim = async (project) => {
+  const simId = project.simulation_id || project.id
+  const ok = window.confirm(`Hapus simulasi ${simId}? Semua data terkait akan dihapus.`)
+  if (!ok) return
+  try {
+    const { deleteSimulation } = await import('../api/simulation')
+    await deleteSimulation(simId)
+    const idx = projects.value.indexOf(project)
+    if (idx !== -1) projects.value.splice(idx, 1)
+  } catch (e) {
+    console.warn('Gagal hapus simulasi:', e)
+    alert('Gagal menghapus simulasi: ' + (e.response?.data?.error || e.message))
+  }
+}
+
 // 截断文件名（保留扩展名）
 const truncateFilename = (filename, maxLength) => {
   if (!filename) return t('history.unknownFile')
@@ -697,6 +716,32 @@ onUnmounted(() => {
   border-bottom: 1px solid #F3F4F6;
   font-family: 'JetBrains Mono', 'SF Mono', monospace;
   font-size: 0.7rem;
+}
+
+.card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-delete-sim {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9CA3AF;
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: all 0.2s;
+  opacity: 0;
+}
+.project-card:hover .btn-delete-sim {
+  opacity: 1;
+}
+.btn-delete-sim:hover {
+  color: #EF4444;
+  background: #FEE2E2;
 }
 
 .card-id {

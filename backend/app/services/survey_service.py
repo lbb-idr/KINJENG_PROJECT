@@ -129,21 +129,22 @@ Pertanyaan harus:
         """Generate a basic survey when LLM is unavailable."""
         scale = params.get('likertScale', 5)
         template = ACADEMIC_TEMPLATES[f"likert_{scale}"]
+        topic = requirement[:80] if requirement else "topik riset"
 
         return {
-            "title": f"Survei: {requirement[:60]}",
+            "title": f"Survei: {topic}",
             "description": f"Survei akademik untuk menganalisis: {requirement}",
             "sim_type": sim_type,
             "params": params,
             "sections": [
                 {
                     "id": "persepsi",
-                    "title": "Persepsi dan Sikap",
+                    "title": "Persepsi terhadap " + topic,
                     "questions": [
                         {
                             "id": "q01",
                             "type": "likert",
-                            "text": "Saya memahami isu yang diangkat dalam riset ini",
+                            "text": f"Saya memahami isu tentang: {topic}",
                             "scale": template["scale"],
                             "labels": template["labels"],
                             "required": True
@@ -151,7 +152,7 @@ Pertanyaan harus:
                         {
                             "id": "q02",
                             "type": "likert",
-                            "text": "Isu ini relevan dengan kehidupan saya sehari-hari",
+                            "text": f"Topik '{topic}' relevan dengan kehidupan saya sehari-hari",
                             "scale": template["scale"],
                             "labels": template["labels"],
                             "required": True
@@ -159,7 +160,7 @@ Pertanyaan harus:
                         {
                             "id": "q03",
                             "type": "mcq",
-                            "text": "Seberapa sering Anda terpapar informasi tentang topik ini?",
+                            "text": f"Seberapa sering Anda terpapar informasi tentang '{topic}'?",
                             "options": ["Tidak pernah", "Jarang", "Kadang-kadang", "Sering", "Sangat sering"],
                             "required": True
                         }
@@ -167,12 +168,12 @@ Pertanyaan harus:
                 },
                 {
                     "id": "opini",
-                    "title": "Opini dan Preferensi",
+                    "title": f"Opini tentang {topic}",
                     "questions": [
                         {
                             "id": "q04",
                             "type": "likert",
-                            "text": "Saya memiliki opini yang kuat tentang topik ini",
+                            "text": f"Saya setuju dengan kebijakan terkait '{topic}'",
                             "scale": template["scale"],
                             "labels": template["labels"],
                             "required": True
@@ -180,7 +181,7 @@ Pertanyaan harus:
                         {
                             "id": "q05",
                             "type": "likert",
-                            "text": "Pendapat saya dipengaruhi oleh lingkungan sekitar",
+                            "text": f"Topik '{topic}' akan berdampak langsung pada kehidupan saya",
                             "scale": template["scale"],
                             "labels": template["labels"],
                             "required": True
@@ -188,14 +189,14 @@ Pertanyaan harus:
                         {
                             "id": "q06",
                             "type": "mcq",
-                            "text": "Faktor apa yang paling memengaruhi pandangan Anda?",
-                            "options": ["Media massa", "Lingkungan sosial", "Pengalaman pribadi", "Pendidikan formal", "Sosial media"],
+                            "text": f"Apa sumber utama informasi Anda tentang '{topic}'?",
+                            "options": ["Media massa", "Lingkungan sosial", "Pengalaman pribadi", "Pendidikan formal", "Media sosial"],
                             "required": True
                         },
                         {
                             "id": "q07",
                             "type": "mcq",
-                            "text": "Bagaimana Anda biasanya membentuk opini tentang isu baru?",
+                            "text": f"Bagaimana Anda biasanya membentuk opini tentang '{topic}'?",
                             "options": ["Mencari informasi dari berbagai sumber", "Mengandalkan opini orang terpercaya", "Intuisi pribadi", "Diskusi dengan teman/keluarga", "Tidak terlalu memikirkan"],
                             "required": True
                         }
@@ -203,12 +204,12 @@ Pertanyaan harus:
                 },
                 {
                     "id": "perilaku",
-                    "title": "Perilaku dan Tindakan",
+                    "title": f"Tindakan terkait {topic}",
                     "questions": [
                         {
                             "id": "q08",
                             "type": "likert",
-                            "text": "Saya bersedia mengubah pendapat jika ada bukti baru yang kuat",
+                            "text": f"Saya bersedia mengubah pendapat tentang '{topic}' jika ada bukti baru",
                             "scale": template["scale"],
                             "labels": template["labels"],
                             "required": True
@@ -216,7 +217,7 @@ Pertanyaan harus:
                         {
                             "id": "q09",
                             "type": "likert",
-                            "text": "Saya aktif mendiskusikan topik ini dengan orang lain",
+                            "text": f"Saya aktif mendiskusikan '{topic}' dengan orang lain",
                             "scale": template["scale"],
                             "labels": template["labels"],
                             "required": True
@@ -224,7 +225,7 @@ Pertanyaan harus:
                         {
                             "id": "q10",
                             "type": "mcq",
-                            "text": "Apa tindakan yang paling mungkin Anda lakukan terkait isu ini?",
+                            "text": f"Apa tindakan yang paling mungkin Anda lakukan terkait '{topic}'?",
                             "options": ["Membagikan informasi", "Berdiskusi dengan orang terdekat", "Mencari tahu lebih dalam", "Tidak melakukan apa-apa", "Menulis opini di media sosial"],
                             "required": True
                         }
@@ -232,12 +233,12 @@ Pertanyaan harus:
                 },
                 {
                     "id": "refleksi",
-                    "title": "Refleksi Terbuka",
+                    "title": f"Refleksi tentang {topic}",
                     "questions": [
                         {
                             "id": "q11",
                             "type": "open",
-                            "text": "Apa pendapat pribadi Anda tentang isu ini? Jelaskan secara singkat.",
+                            "text": f"Apa pendapat pribadi Anda tentang '{topic}'? Jelaskan secara singkat.",
                             "max_length": 500,
                             "required": False
                         }
@@ -324,6 +325,139 @@ Pertanyaan harus:
 
 class AcademicPersonaGenerator:
     """Generates diverse academic personas for survey agents."""
+
+    @staticmethod
+    def map_simulation_to_survey(simulation_profiles: List[Dict[str, Any]], topic: str = "") -> List[Dict[str, Any]]:
+        """
+        Map simulation agent profiles (from OASIS) to survey persona format.
+        
+        Maps fields:
+          user_id → agent_id
+          age → age (same)
+          gender → gender (Laki-laki/Perempuan)
+          mbti + education_level/knowledge_level → personality, trait
+          profession → occupation
+          persona + cognitive_style → opinion_bias, social_influence
+          education_level → education
+          iq_level, cognitive_style, knowledge_level → directly mapped (new fields)
+        
+        Args:
+            simulation_profiles: List of agent dicts from SimulationManager.get_profiles()
+            topic: The survey topic (used to infer knowledge relevance)
+            
+        Returns:
+            List of survey persona dicts compatible with SurveyEngine.load_personas()
+        """
+        templates = SurveyTemplateService.get_academic_agent_prompt()
+        personality_types = [p["type"] for p in templates["personality_types"]]
+        
+        cognitive_to_personality = {
+            "Analitis": "Analitis", "Logis": "Analitis", "Praktis": "Pragmatis",
+            "Intuitif": "Selalu Bertanya-tanya", "Kreatif": "Antusias",
+            "Emosional": "Mudah Terbawa Perasaan", "Formal": "Pragmatis",
+            "Informatif": "Analitis", "Netral": "Seimbang", "Otoritatif": "Idealis"
+        }
+        
+        iq_to_bias = {
+            "Sangat Rendah": "Hati-hati", "Rendah": "Hati-hati",
+            "Rata-rata": "Netral", "Tinggi": "Terbuka", "Sangat Tinggi": "Seimbang"
+        }
+        
+        knowledge_to_influence = {
+            "Rendah": "Terpengaruh media", "Sedang": "Terpengaruh teman",
+            "Tinggi": "Mandiri", "Ahli": "Mandiri"
+        }
+        
+        def normalize_gender(g: Optional[str]) -> str:
+            if not g:
+                return random.choice(["Laki-laki", "Perempuan"])
+            g = g.lower().strip()
+            if g in ("male", "laki-laki", "laki", "pria"):
+                return "Laki-laki"
+            if g in ("female", "perempuan", "wanita"):
+                return "Perempuan"
+            return random.choice(["Laki-laki", "Perempuan"])
+        
+        def infer_education(prof: str, education_level: Optional[str]) -> str:
+            if education_level:
+                return education_level
+            high_edu_occupations = ["professor", "dosen", "peneliti", "dokter", "pns", "expert"]
+            if any(o in prof.lower() for o in high_edu_occupations):
+                return "S2/S3"
+            return random.choice(["SD/SMP", "SMA/SMK", "D3", "S1"])
+        
+        def infer_personality(mbti: Optional[str], cognitive: Optional[str]) -> str:
+            if cognitive and cognitive in cognitive_to_personality:
+                return cognitive_to_personality[cognitive]
+            if mbti:
+                mbti_upper = mbti.upper().strip()
+                if mbti_upper.startswith("INT") or mbti_upper.startswith("ENT"):
+                    return "Analitis"
+                if mbti_upper.startswith("INF") or mbti_upper.startswith("ENF"):
+                    return "Idealis"
+                if mbti_upper.startswith("ISF") or mbti_upper.startswith("ESF"):
+                    return "Antusias"
+                if mbti_upper.startswith("IST") or mbti_upper.startswith("EST"):
+                    return "Pragmatis"
+            return random.choice(personality_types)
+        
+        def infer_knowledge(kl: Optional[str], topic: str) -> str:
+            if kl:
+                return kl
+            if topic:
+                return "Sedang"
+            return random.choice(templates["knowledge_levels"])
+        
+        personas = []
+        for i, profile in enumerate(simulation_profiles):
+            agent_id = profile.get("user_id", profile.get("agent_id", f"agent_{i}"))
+            age = profile.get("age", 30)
+            gender = normalize_gender(profile.get("gender"))
+            occupation = profile.get("profession") or profile.get("occupation") or ""
+            education = infer_education(occupation, profile.get("education_level"))
+            mbti = profile.get("mbti", "")
+            cognitive = profile.get("cognitive_style", "")
+            personality = infer_personality(mbti, cognitive)
+            knowledge = infer_knowledge(profile.get("knowledge_level"), topic)
+            iq = profile.get("iq_level", "Rata-rata")
+            
+            # Infer bias from IQ + cognitive style
+            opinion_bias = iq_to_bias.get(iq, "Netral")
+            social_influence = knowledge_to_influence.get(knowledge, "Terpengaruh teman")
+            
+            # Build a concise trait from the persona text
+            persona_text = profile.get("persona", profile.get("bio", ""))
+            trait_prefixes = {
+                "Analitis": "Cenderung menganalisis sebelum merespon",
+                "Mudah Terbawa Perasaan": "Emosional dan mudah terpengaruh suasana",
+                "Selalu Bertanya-tanya": "Skeptis dan selalu ingin tahu lebih dalam",
+                "Antusias": "Bersemangat dan ekspresif dalam berpendapat",
+                "Pragmatis": "Fokus pada solusi praktis dan realistis",
+                "Apatis": "Cenderung acuh dan tidak terlalu peduli",
+                "Idealis": "Berpegang teguh pada prinsip dan nilai-nilai ideal",
+            }
+            trait = trait_prefixes.get(personality, "Memiliki pandangan unik terhadap isu sosial")
+            
+            persona = {
+                "agent_id": f"agent_sim_{agent_id}",
+                "age": age,
+                "gender": gender,
+                "education": education,
+                "occupation": occupation if occupation else random.choice(templates["persona_template"]).split("Pekerjaan: ")[-1].split("\n")[0].strip() if "Pekerjaan: " in templates["persona_template"] else "Lainnya",
+                "personality": personality,
+                "trait": trait,
+                "knowledge_level": knowledge,
+                "opinion_bias": opinion_bias,
+                "social_influence": social_influence,
+                # Include original simulation fields for enrichment
+                "persona_text": persona_text[:2000] if persona_text else "",
+                "cognitive_style": cognitive,
+                "iq_level": iq,
+            }
+            personas.append(persona)
+        
+        logger.info(f"Mapped {len(personas)} simulation profiles to survey personas")
+        return personas
 
     @staticmethod
     def generate_batch(count: int) -> List[Dict[str, Any]]:

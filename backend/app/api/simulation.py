@@ -222,6 +222,7 @@ def create_simulation():
             graph_id=graph_id,
             enable_twitter=data.get('enable_twitter', True),
             enable_reddit=data.get('enable_reddit', True),
+            sim_type=data.get('sim_type', 'academic'),
         )
         
         return jsonify({
@@ -2733,6 +2734,50 @@ def close_simulation_env():
         
     except Exception as e:
         logger.error(f"关闭环境失败: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+
+
+@simulation_bp.route('/<simulation_id>', methods=['DELETE'])
+def delete_simulation(simulation_id: str):
+    """Hapus simulasi dan semua data terkait"""
+    import shutil
+    try:
+        manager = SimulationManager()
+
+        # 1. Stop jika masih running
+        runner = SimulationRunner()
+        try:
+            runner.stop_simulation(simulation_id)
+        except:
+            pass
+
+        # 2. Hapus direktori simulasi
+        sim_dir = manager._get_simulation_dir(simulation_id)
+        if os.path.exists(sim_dir):
+            shutil.rmtree(sim_dir)
+
+        # 3. Hapus state dari memory
+        if simulation_id in manager._simulations:
+            del manager._simulations[simulation_id]
+
+        # 4. Hapus report terkait
+        try:
+            from ..services.report_agent import ReportManager
+            ReportManager.delete_report(simulation_id)
+        except:
+            pass
+
+        return jsonify({
+            "success": True,
+            "message": f"Simulasi {simulation_id} berhasil dihapus"
+        })
+
+    except Exception as e:
+        logger.error(f"Gagal hapus simulasi: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e),

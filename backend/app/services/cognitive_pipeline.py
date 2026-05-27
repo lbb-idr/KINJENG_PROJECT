@@ -2,10 +2,9 @@
 Cognitive Pipeline — Orchestrates the full think → debate → answer pipeline for survey agents.
 """
 
-import json
 import time
-from typing import Dict, Any, List, Optional, Tuple
-from dataclasses import dataclass, field
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass
 
 from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
@@ -157,6 +156,11 @@ class CognitivePipeline:
     ) -> Dict[str, Any]:
         debate_round = self.parliament.debate(question, persona, likert_scale)
         memory_context = memory.get_context_block() if memory else ""
+        education = persona.get("education", "?")
+        cognitive = persona.get("cognitive_style", persona.get("trait", ""))
+        knowledge = persona.get("knowledge_level", "?")
+        iq = persona.get("iq_level", "?")
+        persona_extra = f"Pendidikan: {education}, Gaya Kognitif: {cognitive}, Pengetahuan: {knowledge}, IQ: {iq}"
 
         text_answer = None
         if self.use_llm:
@@ -166,7 +170,8 @@ class CognitivePipeline:
                     messages=[
                         {"role": "system", "content": (
                             f"Anda adalah partisipan survei. Profil:\n"
-                            f"{debate_round.persona_summary}\n\n"
+                            f"{debate_round.persona_summary}\n"
+                            f"{persona_extra}\n\n"
                             f"{memory_context}\n\n"
                             f"Jawab pertanyaan berikut dengan 1-2 kalimat singkat dan natural."
                         )},
@@ -231,7 +236,10 @@ class CognitivePipeline:
             f"Usia: {persona.get('age', '?')}, "
             f"Pekerjaan: {persona.get('occupation', '?')}, "
             f"Kepribadian: {persona.get('personality', '?')}, "
-            f"Opini: {persona.get('opinion_bias', '?')}"
+            f"Opini: {persona.get('opinion_bias', '?')}, "
+            f"Pendidikan: {persona.get('education', '?')}, "
+            f"Gaya Kognitif: {persona.get('cognitive_style', '?')}, "
+            f"Pengetahuan: {persona.get('knowledge_level', '?')}"
         )
 
         if self.use_llm:
@@ -284,15 +292,19 @@ class CognitivePipeline:
 class SurveyEngine:
     """
     Orchestrates survey simulation across multiple agents.
-    Manages personas, memories, and the cognitive pipeline.
+    For Likert questions: uses multi-agent debate (5 agents, 2 rounds + chairperson).
+    For MCQ/Open/Demographic: processes each agent individually.
     """
 
-    def __init__(self, project_id: str, use_llm: bool = True):
+    def __init__(self, project_id: str, use_llm: bool = True, agent_profiles: Optional[List[Dict]] = None):
         self.project_id = project_id
+        self.use_llm = use_llm
         self.pipeline = CognitivePipeline(use_llm=use_llm)
         self.memory_store = None
         self.personas: List[Dict[str, Any]] = []
         self.survey_config: Optional[Dict[str, Any]] = None
+        self.agent_profiles = agent_profiles
+        self.debate_sessions: List[Dict] = []
 
     def load_survey(self, survey_config: Dict[str, Any]):
         self.survey_config = survey_config
@@ -300,6 +312,72 @@ class SurveyEngine:
     def load_personas(self, personas: List[Dict[str, Any]]):
         self.personas = personas
         self.memory_store = __import__('app.services.survey_memory', fromlist=['SurveyMemoryStore']).SurveyMemoryStore(self.project_id)
+        # Gunakan personas sebagai fallback agent_profiles
+        if not self.agent_profiles:
+            self.agent_profiles = personas
+
+    def _map_persona_for_debate(self, persona: Dict) -> Dict:
+        """Map AcademicPersonaGenerator format → SurveyDebateService format."""
+        return {
+            "user_id": persona.get("agent_id", "unknown"),
+            "name": persona.get("name", f"Agent-{persona.get('agent_id', '?')}"),
+            "username": persona.get("agent_id", "agent_unknown"),
+            "age": persona.get("age", 30),
+            "occupation": persona.get("occupation", ""),
+            "profession": persona.get("occupation", ""),
+            "personality": persona.get("personality", ""),
+            "mbti": persona.get("personality", ""),
+            "opinion_bias": persona.get("opinion_bias", "Seimbang"),
+            "bio": f"Usia {persona.get('age', '?')}, {persona.get('occupation', '?')}, {persona.get('personality', '?')}",
+            "persona": persona.get("persona_text") or persona.get("personality", ""),
+            "interested_topics": [persona.get("occupation", ""), persona.get("personality", "")],
+            "education_level": persona.get("education", ""),
+            "iq_level": persona.get("iq_level", "Rata-rata"),
+            "cognitive_style": persona.get("cognitive_style", ""),
+            "knowledge_level": persona.get("knowledge_level", "Sedang"),
+        }
+
+    def _get_individual_likert(self, consensus: int, persona: Dict, scale: int) -> int:
+        """Adjust consensus score by persona's opinion_bias to preserve variance."""
+        bias = str(persona.get("opinion_bias", "Seimbang")).lower()
+        adjustment = 0
+        for keyword, delta in [("sangat setuju", 1), ("sangat mendukung", 1),
+                                ("sangat tidak setuju", -1), ("sangat kritis", -1),
+                                ("setuju", 0), ("mendukung", 0),
+                                ("tidak setuju", 0), ("kritis", 0),
+                                ("seimbang", 0), ("netral", 0)]:
+            if keyword in bias:
+                adjustment = delta
+                break
+        return max(1, min(scale, consensus + adjustment))
+
+    def _run_likert_debate(self, question: Dict, likert_scale: int) -> Dict:
+        """Run multi-agent debate for one Likert question. Returns debate result + session_id."""
+        from .survey_debate import SurveyDebateService
+        svc = SurveyDebateService()
+        q_text = question.get("text", "")
+        q_id = question.get("id", "unknown")
+
+        # Map personas ke format debate, lalu pilih 5 agen relevan
+        debate_profiles = [self._map_persona_for_debate(p) for p in self.agent_profiles]
+        agents = svc.select_debate_agents(q_text, debate_profiles, count=5)
+        if len(agents) < 2:
+            agents = debate_profiles[:5]
+
+        session = svc.create_session(q_id, q_text, agents, likert_scale)
+        result = svc.run_debate(session.session_id)
+
+        session_info = {
+            "session_id": result.session_id,
+            "question_id": q_id,
+            "question_text": q_text,
+            "likert_score": result.likert_score,
+            "confidence": result.confidence,
+            "chairperson_conclusion": result.chairperson_conclusion
+        }
+        self.debate_sessions.append(session_info)
+
+        return session_info
 
     def run_survey(
         self,
@@ -310,13 +388,12 @@ class SurveyEngine:
         """
         Run the full survey simulation.
         
-        Args:
-            question_ids: Filter to specific questions (None = all)
-            agent_ids: Filter to specific agents (None = all)
-            batch_size: Agents per batch
-            
+        Flow:
+        1. Debate phase: for each Likert question, run multi-agent debate
+        2. Wrap-up: for MCQ/Open/Demographic, process all agents individually
+        
         Returns:
-            Complete survey results
+            Complete survey results with debate_sessions
         """
         if not self.survey_config or not self.personas:
             return {"error": "Survey config and personas must be loaded first"}
@@ -334,6 +411,24 @@ class SurveyEngine:
             if agent_ids is None or p.get("agent_id") in agent_ids
         ]
 
+        self.debate_sessions = []
+        likert_results = {}  # q_id → debate result
+
+        # ── Phase 1: Debate for each Likert question (only if use_llm) ──
+        likert_questions = [q for q in questions if q.get("type") == "likert"]
+        other_questions = [q for q in questions if q.get("type") != "likert"]
+
+        if self.use_llm:
+            for q in likert_questions:
+                q_id = q.get("id", "unknown")
+                logger.info(f"Debate phase: Q={q_id} ({q.get('text', '')[:40]}...)")
+                debate = self._run_likert_debate(q, likert_scale)
+                likert_results[q_id] = debate
+        else:
+            # Fallback: treat likert as other (per-agent processing via pipeline)
+            other_questions = questions
+
+        # ── Phase 2: Per-agent for non-Likert questions ──
         results = []
         total = len(target_agents)
         for i, persona in enumerate(target_agents):
@@ -344,10 +439,28 @@ class SurveyEngine:
             responses = self.pipeline.process_batch(
                 agent_id=agent_id,
                 agent_persona=persona,
-                questions=questions,
+                questions=other_questions,
                 memory=memory,
                 likert_scale=likert_scale
             )
+
+            # Tambahkan debate results sebagai responses untuk Likert questions
+            # Setiap agent dapat ±1 dari consensus berdasarkan opinion_bias-nya
+            if self.use_llm:
+                for q in likert_questions:
+                    q_id = q.get("id", "unknown")
+                    d = likert_results.get(q_id, {})
+                    consensus = d.get("likert_score", likert_scale // 2 + 1)
+                    agent_score = self._get_individual_likert(consensus, persona, likert_scale)
+                    responses.append(SurveyResponse(
+                        agent_id=agent_id,
+                        question_id=q_id,
+                        question_text=q.get("text", ""),
+                        likert_score=agent_score,
+                        answer=f"LIKERT: {agent_score} | {d.get('chairperson_conclusion', '')}",
+                        text_answer=d.get("chairperson_conclusion", ""),
+                        confidence=d.get("confidence", 0.7)
+                    ))
 
             results.append({
                 "agent_id": agent_id,
@@ -377,5 +490,6 @@ class SurveyEngine:
             "total_agents": total,
             "total_questions": len(questions),
             "likert_scale": likert_scale,
-            "results": results
+            "results": results,
+            "debate_sessions": self.debate_sessions
         }
