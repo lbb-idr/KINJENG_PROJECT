@@ -2,17 +2,17 @@
 
 **Platform Simulasi Multi-Agent untuk Riset Sosial**
 
-KINJENG_PROJECT bikin simulasi sosial pakai AI. Kamu upload dokumen, terus AI bikin agen-agen virtual (orang-orang digital) yang punya kepribadian, ingatan, dan cara berpikir sendiri. Mereka bakal berinteraksi, ngobrol, debat — mirip dunia nyata. Hasilnya bisa kamu lihat dalam bentuk grafik, statistik, dan laporan PDF.
+KINJENG_PROJECT adalah platform simulasi sosial berbasis AI. Pengguna dapat mengunggah dokumen, kemudian sistem akan menciptakan agen-agen virtual yang memiliki kepribadian, ingatan, dan pola pikir masing-masing. Agen-agen ini akan berinteraksi, berdiskusi, dan berdebat satu sama lain — layaknya masyarakat nyata. Hasil simulasi dapat dilihat dalam bentuk grafik, statistik, dan laporan PDF.
 
-Gampangnya: **kamu kasih data → AI bikin masyarakat digital → mereka "hidup" dan berinteraksi → kamu lihat hasilnya.**
+Alur kerjanya: **unggah data → AI menciptakan masyarakat digital → agen berinteraksi → hasil siap dianalisis.**
 
 ## Fitur
 
-- **Simulasi Sosial** — Bikin agen AI dengan kepribadian beda-beda, mereka saling ngobrol dan berdebat
-- **Graph Interaksi** — Lihat hubungan antar agen dalam bentuk peta visual
-- **Debat Internal** — Setiap agen punya "suara" berbeda (rasional, emosional, dll) yang debat sebelum ambil keputusan
-- **Statistik & Laporan** — Hasil simulasi diolah otomatis jadi tabel, grafik, dan laporan PDF
-- **5 Tipe Simulasi** — Akademik, Politik, Pasar, Sosial, atau Kustom
+- **Simulasi Multi-Agent** — Ciptakan agen AI dengan kepribadian beragam; mereka akan berkomunikasi dan berdebat secara otomatis
+- **Graf Interaksi** — Visualisasi hubungan antar agen dalam bentuk peta jaringan
+- **Debat Internal** — Setiap agen memiliki perspektif berbeda (rasional, emosional, sosial, dll) yang berdebat sebelum mengambil keputusan
+- **Statistik & Laporan** — Hasil simulasi diolah menjadi tabel, grafik, dan laporan PDF
+- **5 Jenis Simulasi** — Akademik, Politik, Pasar, Sosial, atau Kustom
 
 ## Tech Stack
 
@@ -25,7 +25,7 @@ Gampangnya: **kamu kasih data → AI bikin masyarakat digital → mereka "hidup"
 
 ## Engine Simulasi
 
-KINJENG_PROJECT pakai **[MiroFish](https://github.com/666ghj/MiroFish)** sebagai mesin simulasi utamanya. MiroFish adalah engine buat simulasi sosial AI yang udah mature. Didukung sama **[OASIS](https://github.com/camel-ai/oasis)** dari CAMEL-AI buat simulasi interaksi agen di platform sosial.
+KINJENG_PROJECT menggunakan **[MiroFish](https://github.com/666ghj/MiroFish)** sebagai mesin simulasi multi-agent. MiroFish merupakan platform simulasi sosial berbasis AI yang telah mature dan didukung oleh **[OASIS](https://github.com/camel-ai/oasis)** dari CAMEL-AI untuk simulasi interaksi agen di platform sosial.
 
 ## Development
 
