@@ -1,5 +1,5 @@
 """
-MiroFish Backend - Flask应用工厂
+KINJENG_PROJECT Backend - Flask Application Factory
 """
 
 import os
@@ -39,7 +39,7 @@ def create_app(config_class=Config):
     
     if should_log_startup:
         logger.info("=" * 50)
-        logger.info("MiroFish Backend 启动中...")
+        logger.info("KINJENG_PROJECT Backend starting...")
         logger.info("=" * 50)
     
     # 启用CORS
@@ -120,7 +120,7 @@ def create_app(config_class=Config):
     # 健康检查
     @app.route('/health')
     def health():
-        return {'status': 'ok', 'service': 'MiroFish Backend'}
+        return {'status': 'ok', 'service': 'KINJENG_PROJECT Backend'}
     
     # Metrics endpoint
     @app.route('/api/metrics')
@@ -143,7 +143,7 @@ def create_app(config_class=Config):
             return send_from_directory(frontend_dir, 'index.html')
     
     if should_log_startup:
-        logger.info("MiroFish Backend 启动完成")
+        logger.info("KINJENG_PROJECT Backend started")
     
     return app
 

@@ -26,8 +26,8 @@
     "files": "file"
   },
   "meta": {
-    "title": "MiroFish - Platform Simulasi Multi-Agent",
-    "description": "MiroFish - Platform simulasi multi-agent untuk riset akademik dan analisis opini"
+    "title": "KINJENG_PROJECT - Platform Simulasi Multi-Agent",
+    "description": "KINJENG_PROJECT - Platform simulasi multi-agent untuk riset akademik dan analisis opini"
   },
   "nav": {
     "visitGithub": "Kunjungi GitHub"
@@ -38,7 +38,7 @@
     "heroTitle1": "Upload Dokumen,",
     "heroTitle2": "Simulasikan Masa Depan",
     "heroDesc": "Dari satu dokumen, {brand} mengekstrak realitas awal untuk menghasilkan dunia paralel dengan hingga {agentScale}. Masukkan variabel untuk menemukan {optimalSolution} dalam dinamika kelompok yang kompleks.",
-    "heroDescBrand": "MiroFish",
+    "heroDescBrand": "KINJENG_PROJECT",
     "heroDescAgentScale": "jutaan agen",
     "heroDescOptimalSolution": "\"solusi optimal\"",
     "slogan": "Biarkan agen menjalankan simulasi, biarkan data yang berbicara",
@@ -179,7 +179,7 @@
     "setupComplete": "Selesai",
     "setupCompleteDesc": "Lingkungan simulasi sudah siap. Kamu bisa mulai simulasi sekarang.",
     "roundsConfig": "Atur Jumlah Ronde",
-    "roundsConfigDesc": "MiroFish akan menjalankan simulasi {hours} jam, setiap ronde mewakili {minutesPerRound} menit",
+    "roundsConfigDesc": "KINJENG_PROJECT akan menjalankan simulasi {hours} jam, setiap ronde mewakili {minutesPerRound} menit",
     "customToggle": "Kustom",
     "roundsUnit": "ronde",
     "estimatedDuration": "Untuk 100 agen: estimasi ~{minutes} menit",
@@ -291,7 +291,7 @@
     "selectChatTarget": "Pilih target obrolan",
     "sendSurvey": "Kirim survei ke dunia",
     "reportAgentChat": "Agen Laporan - Obrolan",
-    "reportAgentDesc": "Versi obrolan dari agen pembuat laporan dengan akses ke 4 alat profesional dan memori lengkap MiroFish",
+    "reportAgentDesc": "Versi obrolan dari agen pembuat laporan dengan akses ke 4 alat profesional dan memori lengkap KINJENG_PROJECT",
     "toolInsightForge": "InsightForge Atribusi Mendalam",
     "toolInsightForgeDesc": "Menyelaraskan data benih dunia nyata dengan keadaan simulasi, menggabungkan memori Global/Lokal untuk analisis atribusi mendalam lintas waktu",
     "toolPanoramaSearch": "PanoramaSearch Pelacakan Penuh",

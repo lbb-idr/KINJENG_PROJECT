@@ -5,8 +5,8 @@
     <div class="main-content">
       <!-- Hero / Instruksi Awal -->
       <section class="hero-section">
-        <div class="hero-badge">MIROFISH v0.1</div>
-        <h1 class="hero-title">Selamat Datang di MiroFish</h1>
+        <div class="hero-badge">KINJENG_PROJECT v0.1</div>
+        <h1 class="hero-title">Selamat Datang di KINJENG_PROJECT</h1>
         <p class="hero-desc">
           Platform simulasi multi-agent untuk riset akademik, polling politik,
           riset pasar, dan simulasi sosial. Ikuti langkah-langkah di bawah ini

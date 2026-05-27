@@ -1,0 +1,47 @@
+steps:
+  - name: 'gcr.io/k8s-skaffold/pack'
+    entrypoint: 'pack'
+    args:
+      - 'build'
+      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/kinjeng-project/kinjeng-project:$COMMIT_SHA'
+      - '--builder=gcr.io/buildpacks/builder:latest'
+      - '--network=host'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'tag'
+      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/kinjeng-project/kinjeng-project:$COMMIT_SHA'
+      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/kinjeng-project/kinjeng-project:latest'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/kinjeng-project/kinjeng-project:latest'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'kinjeng-project'
+      - '--image=asia-southeast1-docker.pkg.dev/$PROJECT_ID/kinjeng-project/kinjeng-project:latest'
+      - '--region=asia-southeast1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=2Gi'
+      - '--cpu=2'
+      - '--timeout=300'
+      - '--set-env-vars=GEMINI_API_KEY=$_GEMINI_API_KEY'
+      - '--set-env-vars=LLM_API_KEY=$_LLM_API_KEY'
+      - '--set-env-vars=LLM_BASE_URL=$_LLM_BASE_URL'
+      - '--set-env-vars=LLM_MODEL_NAME=$_LLM_MODEL_NAME'
+      - '--set-env-vars=ZEP_API_KEY=$_ZEP_API_KEY'
+      - '--set-env-vars=SECRET_KEY=$_SECRET_KEY'
+      - '--set-env-vars=JWT_SECRET_KEY=$_JWT_SECRET_KEY'
+images:
+  - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/kinjeng-project/kinjeng-project'
+substitutions:
+  _GEMINI_API_KEY: ''
+  _LLM_API_KEY: ''
+  _LLM_BASE_URL: 'https://integrate.api.nvidia.com/v1'
+  _LLM_MODEL_NAME: 'meta/llama-3.3-70b-instruct'
+  _ZEP_API_KEY: ''
+  _SECRET_KEY: ''
+  _JWT_SECRET_KEY: ''

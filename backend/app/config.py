@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 
 # 加载项目根目录的 .env 文件
-# 路径: MiroFish/.env (相对于 backend/app/config.py)
+# Path: KINJENG_PROJECT/.env
 project_root_env = os.path.join(os.path.dirname(__file__), '../../.env')
 
 if os.path.exists(project_root_env):
@@ -36,6 +36,7 @@ class Config:
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '').strip() or None
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').strip() or None
 
     @classmethod
     @property
@@ -46,6 +47,12 @@ class Config:
                 'api_key': cls.LLM_API_KEY,
                 'base_url': cls.LLM_BASE_URL,
                 'model': cls.LLM_MODEL_NAME,
+            },
+            {
+                'name': 'gemini',
+                'api_key': cls.GEMINI_API_KEY,
+                'base_url': 'https://generativelanguage.googleapis.com/v1beta/openai/',
+                'model': 'gemini-2.0-flash',
             },
             {
                 'name': 'openai',
@@ -104,10 +111,9 @@ class Config:
     
     @classmethod
     def validate(cls) -> list[str]:
-        """验证必要配置"""
         errors: list[str] = []
-        if not cls.LLM_API_KEY:
-            errors.append("LLM_API_KEY 未配置")
+        if not cls.LLM_API_KEY and not cls.GEMINI_API_KEY:
+            errors.append("Tidak ada LLM API key yang dikonfigurasi (LLM_API_KEY atau GEMINI_API_KEY)")
         if not cls.ZEP_API_KEY:
             errors.append("ZEP_API_KEY 未配置")
         return errors

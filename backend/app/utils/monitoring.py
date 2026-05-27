@@ -1,5 +1,5 @@
 """
-Lightweight metrics collector for MiroFish
+Lightweight metrics collector for KINJENG_PROJECT
 Tracks request counts, latencies, errors
 """
 import time

@@ -1,6 +1,6 @@
 <template>
   <nav class="navbar">
-    <div class="nav-brand" @click="$router.push('/')">MIROFISH</div>
+    <div class="nav-brand" @click="$router.push('/')">KINJENG_PROJECT</div>
     <button class="hamburger" :class="{ open: menuOpen }" @click="menuOpen = !menuOpen" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>

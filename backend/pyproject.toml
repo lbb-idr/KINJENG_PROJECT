@@ -1,11 +1,11 @@
 [project]
-name = "mirofish-backend"
+name = "kinjeng-backend"
 version = "0.1.0"
-description = "MiroFish - 简洁通用的群体智能引擎，预测万物"
+description = "KINJENG_PROJECT - 简洁通用的群体智能引擎，预测万物"
 requires-python = ">=3.11,<3.13"
 license = { text = "AGPL-3.0" }
 authors = [
-    { name = "MiroFish Team" }
+    { name = "KINJENG_PROJECT Team" }
 ]
 
 dependencies = [

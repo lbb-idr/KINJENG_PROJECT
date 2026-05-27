@@ -201,7 +201,7 @@ const types = [
     id: 'custom',
     icon: '⚙️',
     title: 'Kustom',
-    desc: 'Alur kerja MiroFish bebas. Upload dokumen dan deskripsi kebutuhan, tentukan sendiri skenario simulasi yang diinginkan.',
+    desc: 'Alur kerja KINJENG_PROJECT bebas. Upload dokumen dan deskripsi kebutuhan, tentukan sendiri skenario simulasi yang diinginkan.',
     tags: ['Bebas', 'Kustom', 'Lengkap']
   }
 ]

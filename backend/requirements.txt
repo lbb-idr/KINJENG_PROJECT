@@ -1,5 +1,5 @@
 # ===========================================
-# MiroFish Backend Dependencies
+# KINJENG_PROJECT Backend Dependencies
 # ===========================================
 # Python 3.11+ required
 # Install: pip install -r requirements.txt
@@ -12,6 +12,8 @@ flask-cors>=6.0.0
 # ============= LLM 相关 =============
 # OpenAI SDK（统一使用 OpenAI 格式调用 LLM）
 openai>=1.0.0
+# Google Gemini SDK
+google-generativeai>=0.8.0
 
 # ============= Zep Cloud =============
 zep-cloud==3.13.0

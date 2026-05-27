@@ -8,11 +8,11 @@ if "%MINIMIZED%"=="" (
 )
 
 cd /d "%~dp0"
-title MiroFish Launcher
+title KINJENG_PROJECT Launcher
 color 0B
 
 echo ========================================
-echo   MiroFish Launcher
+echo   KINJENG_PROJECT Launcher
 echo ========================================
 echo.
 
@@ -26,7 +26,7 @@ if %BACKEND_RUNNING% equ 1 (
     echo [1/2] Backend already running on port 5001
 ) else (
     echo [1/2] Starting backend...
-    start "MiroFish-Backend" cmd /k "cd /d "%~dp0backend" && .venv\Scripts\python run.py"
+    start "KINJENG_PROJECT-Backend" cmd /k "cd /d "%~dp0backend" && .venv\Scripts\python run.py"
     timeout /t 4 /nobreak >nul
 )
 
@@ -34,15 +34,15 @@ if %FRONTEND_RUNNING% equ 1 (
     echo [2/2] Frontend already running on port 3000
 ) else (
     echo [2/2] Starting frontend...
-    start "MiroFish-Frontend" cmd /k "cd /d "%~dp0frontend" && npm.cmd run dev"
+    start "KINJENG_PROJECT-Frontend" cmd /k "cd /d "%~dp0frontend" && npm.cmd run dev"
     timeout /t 5 /nobreak >nul
 )
 
 echo.
 if %BACKEND_RUNNING% equ 1 if %FRONTEND_RUNNING% equ 1 (
-    echo MiroFish already running -- opening browser...
+    echo KINJENG_PROJECT already running -- opening browser...
 ) else (
-    echo MiroFish is running!
+    echo KINJENG_PROJECT is running!
 )
 start http://localhost:3000
 

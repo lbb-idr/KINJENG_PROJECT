@@ -82,7 +82,7 @@ class GraphBuilderService:
         self,
         text: str,
         ontology: Dict[str, Any],
-        graph_name: str = "MiroFish Graph",
+        graph_name: str = "KINJENG_PROJECT Graph",
         chunk_size: int = 500,
         chunk_overlap: int = 50,
         batch_size: int = 3
@@ -231,13 +231,13 @@ class GraphBuilderService:
     def create_graph(self, name: str) -> str:
         graph_id = f"mirofish_{uuid.uuid4().hex[:16]}"
         if self.mode == 'local':
-            self.local.create(graph_id, name, "MiroFish Social Simulation Graph")
+            self.local.create(graph_id, name, "KINJENG_PROJECT Social Simulation Graph")
         else:
             rate_limit()
             self.client.graph.create(
                 graph_id=graph_id,
                 name=name,
-                description="MiroFish Social Simulation Graph"
+                description="KINJENG_PROJECT Social Simulation Graph"
             )
         return graph_id
     
