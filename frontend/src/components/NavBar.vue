@@ -34,7 +34,6 @@ const menuOpen = ref(false)
 
 const links = computed(() => [
   { to: '/', icon: '🏠', label: 'Beranda' },
-  { to: '/choose-simulation', icon: '🎯', label: 'Simulasi' },
   { to: '/parliament', icon: '🧠', label: 'Debat Internal' },
   { to: '/survey-results', icon: '📊', label: 'Hasil Survei' }
 ])
