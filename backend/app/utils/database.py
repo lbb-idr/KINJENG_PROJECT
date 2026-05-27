@@ -76,6 +76,17 @@ class DatabaseManager:
                 config TEXT DEFAULT '{}',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE TABLE IF NOT EXISTS debate_history (
+                id TEXT PRIMARY KEY,
+                question_text TEXT DEFAULT '',
+                likert_score INTEGER,
+                confidence REAL DEFAULT 0,
+                chairperson_conclusion TEXT DEFAULT '',
+                agents TEXT DEFAULT '[]',
+                posts TEXT DEFAULT '[]',
+                mode TEXT DEFAULT 'auto',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
         self._conn.commit()
 
@@ -223,6 +234,50 @@ class DatabaseManager:
         else:
             rows = self.conn.execute("SELECT * FROM survey_results ORDER BY created_at DESC").fetchall()
         return [dict(r) for r in rows]
+
+    # Debate history operations
+    def save_debate_history(self, debate_id, data):
+        self.conn.execute("""
+            INSERT INTO debate_history (id, question_text, likert_score, confidence,
+                chairperson_conclusion, agents, posts, mode, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                question_text=excluded.question_text,
+                likert_score=excluded.likert_score,
+                confidence=excluded.confidence,
+                chairperson_conclusion=excluded.chairperson_conclusion,
+                agents=excluded.agents,
+                posts=excluded.posts,
+                mode=excluded.mode
+        """, (
+            debate_id,
+            data.get('question_text', ''),
+            data.get('likert_score'),
+            data.get('confidence', 0),
+            data.get('chairperson_conclusion', ''),
+            json.dumps(data.get('agents', [])),
+            json.dumps(data.get('posts', [])),
+            data.get('mode', 'auto'),
+            data.get('created_at')
+        ))
+        self.conn.commit()
+
+    def get_debate_history(self, debate_id):
+        row = self.conn.execute("SELECT * FROM debate_history WHERE id=?", (debate_id,)).fetchone()
+        if row:
+            return dict(row)
+        return None
+
+    def list_debate_history(self, limit=20):
+        rows = self.conn.execute(
+            "SELECT id, question_text, likert_score, confidence, mode, created_at FROM debate_history ORDER BY created_at DESC LIMIT ?",
+            (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def delete_debate_history(self, debate_id):
+        self.conn.execute("DELETE FROM debate_history WHERE id=?", (debate_id,))
+        self.conn.commit()
 
     # Simulation operations
     def save_simulation(self, sim_id, data):

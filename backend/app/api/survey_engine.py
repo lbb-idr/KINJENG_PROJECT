@@ -8,11 +8,15 @@ import traceback
 import uuid
 from flask import request, jsonify
 
+from flask import send_file
+
 from . import survey_bp
 from ..services.survey_generator import SurveyGenerator, SurveyResultStore
 from ..services.survey_statistics import SurveyStatistics
 from ..services.survey_service import AcademicPersonaGenerator, SurveyTemplateService
 from ..services.cognitive_pipeline import SurveyEngine
+from ..services.debate_pdf_renderer import generate_debate_pdf, get_debate_pdf_path, delete_debate_pdf
+from ..utils.database import DatabaseManager
 from ..utils.logger import get_logger
 
 logger = get_logger('kinjeng.api.survey_engine')
@@ -621,4 +625,109 @@ def run_all_debates():
 
     except Exception as e:
         logger.error(f"Run all debates failed: {e}\n{traceback.format_exc()}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ── Debate History & PDF ──
+
+
+@survey_bp.route('/debate/history', methods=['GET'])
+def list_debate_history():
+    """List saved debate sessions."""
+    try:
+        db = DatabaseManager()
+        limit = request.args.get('limit', 20, type=int)
+        history = db.list_debate_history(limit)
+        return jsonify({"success": True, "data": history})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@survey_bp.route('/debate/history/<debate_id>', methods=['GET'])
+def get_debate_history(debate_id):
+    """Get a single saved debate."""
+    try:
+        db = DatabaseManager()
+        entry = db.get_debate_history(debate_id)
+        if not entry:
+            return jsonify({"success": False, "error": "Not found"}), 404
+        entry['agents'] = json.loads(entry.get('agents', '[]'))
+        entry['posts'] = json.loads(entry.get('posts', '[]'))
+        return jsonify({"success": True, "data": entry})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@survey_bp.route('/debate/history', methods=['POST'])
+def save_debate_history():
+    """Save a debate session result to history."""
+    try:
+        data = request.get_json() or {}
+        debate_id = data.get('session_id') or str(uuid.uuid4())
+        db = DatabaseManager()
+        db.save_debate_history(debate_id, {
+            'id': debate_id,
+            'question_text': data.get('question_text', ''),
+            'likert_score': data.get('likert_score'),
+            'confidence': data.get('confidence', 0),
+            'chairperson_conclusion': data.get('chairperson_conclusion', ''),
+            'agents': data.get('agents', []),
+            'posts': data.get('posts', []),
+            'mode': data.get('mode', 'auto'),
+            'created_at': data.get('created_at'),
+        })
+        return jsonify({"success": True, "data": {"debate_id": debate_id}})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@survey_bp.route('/debate/history/<debate_id>', methods=['DELETE'])
+def delete_debate_history(debate_id):
+    """Delete a saved debate."""
+    try:
+        db = DatabaseManager()
+        db.delete_debate_history(debate_id)
+        delete_debate_pdf(debate_id)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@survey_bp.route('/debate/history/<debate_id>/pdf', methods=['POST'])
+def generate_debate_pdf_endpoint(debate_id):
+    """Generate PDF for a saved debate."""
+    try:
+        db = DatabaseManager()
+        entry = db.get_debate_history(debate_id)
+        if not entry:
+            return jsonify({"success": False, "error": "Debate not found"}), 404
+
+        agents = json.loads(entry.get('agents', '[]'))
+        posts_data = json.loads(entry.get('posts', '[]'))
+
+        path = generate_debate_pdf(
+            debate_id=debate_id,
+            question_text=entry.get('question_text', ''),
+            likert_score=entry.get('likert_score', 0),
+            likert_scale=5,
+            confidence=entry.get('confidence', 0),
+            chairperson_conclusion=entry.get('chairperson_conclusion', ''),
+            agents=agents,
+            posts=posts_data,
+            mode=entry.get('mode', 'auto'),
+        )
+        return jsonify({"success": True, "data": {"path": path}})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@survey_bp.route('/debate/history/<debate_id>/pdf', methods=['GET'])
+def download_debate_pdf(debate_id):
+    """Download debate PDF."""
+    try:
+        path = get_debate_pdf_path(debate_id)
+        if not path:
+            return jsonify({"success": False, "error": "PDF not found. Generate first with POST."}), 404
+        return send_file(path, as_attachment=True, download_name=f"debat_{debate_id[:8]}.pdf")
+    except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

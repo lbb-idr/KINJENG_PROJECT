@@ -200,6 +200,20 @@
                 </div>
               </div>
             </Transition>
+
+            <!-- Save / PDF Actions -->
+            <div v-if="result && posts.length > 0" class="action-bar">
+              <button class="action-btn save-btn" :disabled="saving" @click="saveDebate">
+                {{ saving ? '⏳ Menyimpan...' : '💾 Simpan' }}
+              </button>
+              <button v-if="savedDebateId" class="action-btn pdf-btn" :disabled="generatingPdf" @click="generatePdf">
+                {{ generatingPdf ? '⏳ Membuat PDF...' : '📄 Buat PDF' }}
+              </button>
+              <button v-if="pdfReady" class="action-btn dl-btn" @click="downloadPdf">
+                📥 Unduh PDF
+              </button>
+            </div>
+            <div v-if="savedMsg" class="save-msg">{{ savedMsg }}</div>
           </div>
 
           <div v-else class="empty-state">
@@ -211,6 +225,40 @@
               Atau pilih mode <strong>"Atur Manual"</strong> untuk menentukan sendiri identitas setiap agen.
             </p>
           </div>
+
+          <!-- History -->
+          <div class="history-section">
+            <button class="history-btn" @click="toggleHistory">
+              📚 Riwayat Debat ({{ historyList.length }})
+            </button>
+            <Transition name="slide">
+              <div v-if="showHistory" class="history-sidebar">
+                <div class="history-header">
+                  <h3>Riwayat Debat</h3>
+                  <button class="close-history" @click="showHistory = false">×</button>
+                </div>
+                <div v-if="loadingHistory" class="history-loading">Memuat...</div>
+                <div v-else-if="historyList.length === 0" class="history-empty">
+                  Belum ada debat yang disimpan.
+                </div>
+                <div v-else class="history-list">
+                  <div
+                    v-for="h in historyList" :key="h.id"
+                    class="history-item"
+                    @click="loadFromHistory(h)"
+                  >
+                    <div class="hist-question">{{ h.question_text?.slice(0, 60) }}{{ h.question_text?.length > 60 ? '...' : '' }}</div>
+                    <div class="hist-meta">
+                      <span class="hist-score">{{ h.likert_score }}/5</span>
+                      <span class="hist-mode">{{ h.mode === 'auto' ? '⚡' : '✏️' }}</span>
+                      <span class="hist-date">{{ new Date(h.created_at).toLocaleDateString('id-ID') }}</span>
+                      <button class="hist-del" @click.stop="deleteFromHistory(h.id)" title="Hapus">×</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Transition>
+          </div>
         </div>
       </div>
     </div>
@@ -218,7 +266,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import NavBar from '../components/NavBar.vue'
 
@@ -242,6 +290,18 @@ const error = ref('')
 const manualStep = ref(0)
 const manualForm = ref(createEmptyForm())
 const manualAgents = ref([])
+
+// Save / PDF
+const savedDebateId = ref(null)
+const saving = ref(false)
+const generatingPdf = ref(false)
+const pdfReady = ref(false)
+const savedMsg = ref('')
+
+// History list
+const historyList = ref([])
+const showHistory = ref(false)
+const loadingHistory = ref(false)
 
 const currentAgent = computed(() => {
   if (confirmedCount.value < agents.value.length) {
@@ -448,6 +508,122 @@ async function runManualDebate() {
   }
 }
 
+// ── History ──
+
+async function loadHistory() {
+  loadingHistory.value = true
+  try {
+    const { data } = await axios.get(`${API}/survey/debate/history?limit=20`)
+    if (data.success) {
+      historyList.value = data.data
+    }
+  } catch { /* ignore */ } finally {
+    loadingHistory.value = false
+  }
+}
+
+function toggleHistory() {
+  showHistory.value = !showHistory.value
+  if (showHistory.value && historyList.value.length === 0) {
+    loadHistory()
+  }
+}
+
+async function loadFromHistory(entry) {
+  try {
+    const { data } = await axios.get(`${API}/survey/debate/history/${entry.id}`)
+    if (data.success) {
+      const d = data.data
+      question.value = d.question_text
+      agents.value = d.agents || []
+      posts.value = d.posts || []
+      result.value = {
+        likert_score: d.likert_score,
+        confidence: d.confidence,
+        chairperson_conclusion: d.chairperson_conclusion
+      }
+      status.value = 'complete'
+      savedDebateId.value = d.id
+      pdfReady.value = !!d.pdf_exists
+      showHistory.value = false
+    }
+  } catch (e) {
+    error.value = e.response?.data?.error || e.message
+  }
+}
+
+async function deleteFromHistory(id) {
+  try {
+    await axios.delete(`${API}/survey/debate/history/${id}`)
+    historyList.value = historyList.value.filter(e => e.id !== id)
+  } catch { /* ignore */ }
+}
+
+// ── Save & PDF ──
+
+async function saveDebate() {
+  if (!posts.value.length || !result.value) return
+  saving.value = true
+  savedMsg.value = ''
+  try {
+    const payload = {
+      session_id: sessionId.value || undefined,
+      question_text: question.value,
+      likert_score: result.value.likert_score,
+      confidence: result.value.confidence,
+      chairperson_conclusion: result.value.chairperson_conclusion,
+      agents: agents.value.map(a => ({
+        name: a.name || a.username || '?',
+        age: a.age,
+        occupation: a.occupation || a.profession || '',
+        personality: a.personality || a.mbti || '',
+        opinion_bias: a.opinion_bias || ''
+      })),
+      posts: posts.value.map(p => ({
+        round_num: p.round_num,
+        agent_id: p.agent_id,
+        agent_name: p.agent_name,
+        content: p.content,
+        timestamp: p.timestamp
+      })),
+      mode: mode.value
+    }
+    const { data } = await axios.post(`${API}/survey/debate/history`, payload)
+    if (data.success) {
+      savedDebateId.value = data.data.debate_id
+      savedMsg.value = 'Debat tersimpan!'
+      loadHistory()
+    }
+  } catch (e) {
+    savedMsg.value = 'Gagal menyimpan: ' + (e.response?.data?.error || e.message)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function generatePdf() {
+  if (!savedDebateId.value) return
+  generatingPdf.value = true
+  try {
+    const { data } = await axios.post(`${API}/survey/debate/history/${savedDebateId.value}/pdf`)
+    if (data.success) {
+      pdfReady.value = true
+      savedMsg.value = 'PDF siap diunduh!'
+    }
+  } catch (e) {
+    savedMsg.value = 'Gagal generate PDF: ' + (e.response?.data?.error || e.message)
+  } finally {
+    generatingPdf.value = false
+  }
+}
+
+function downloadPdf() {
+  if (!savedDebateId.value) return
+  const url = `${API}/survey/debate/history/${savedDebateId.value}/pdf`
+  window.open(url, '_blank')
+}
+
+onMounted(() => loadHistory())
 onUnmounted(() => {})
 </script>
 
@@ -568,12 +744,45 @@ onUnmounted(() => {})
 .result-conclusion { border-top: 1px solid var(--border-color); padding-top: 10px; }
 .conclusion-text { font-size: 0.85rem; line-height: 1.5; color: var(--text-primary); margin: 0; white-space: pre-wrap; }
 
+.action-bar { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+.action-btn { padding: 10px 18px; border: 1px solid var(--border-color); background: var(--bg-card); cursor: pointer; font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600; color: var(--text-primary); transition: all 0.2s; }
+.action-btn:hover:not(:disabled) { border-color: var(--accent-primary); background: var(--bg-secondary); }
+.action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.save-btn { border-color: var(--black); }
+.pdf-btn { border-color: var(--accent-primary); }
+.dl-btn { background: var(--black); color: var(--white); border-color: var(--black); }
+.dl-btn:hover { background: var(--accent-primary); border-color: var(--accent-primary); }
+.save-msg { margin-top: 8px; font-size: 0.78rem; font-family: var(--font-mono); color: var(--success); }
+
+.history-section { margin-top: 20px; }
+.history-btn { width: 100%; padding: 10px; border: 1px dashed var(--border-color); background: var(--bg-secondary); cursor: pointer; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); transition: all 0.2s; }
+.history-btn:hover { border-color: var(--accent-primary); }
+
+.history-sidebar { border: 1px solid var(--border-color); background: var(--bg-card); margin-top: 8px; max-height: 400px; overflow-y: auto; }
+.history-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+.history-header h3 { font-size: 0.85rem; font-weight: 600; margin: 0; }
+.close-history { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-tertiary); }
+.close-history:hover { color: var(--danger); }
+.history-loading, .history-empty { padding: 20px; text-align: center; font-size: 0.8rem; color: var(--text-secondary); }
+.history-list { display: flex; flex-direction: column; }
+.history-item { padding: 10px 16px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background 0.15s; }
+.history-item:hover { background: var(--bg-secondary); }
+.history-item:last-child { border-bottom: none; }
+.hist-question { font-size: 0.78rem; font-weight: 500; margin-bottom: 4px; color: var(--text-primary); }
+.hist-meta { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; font-family: var(--font-mono); color: var(--text-secondary); }
+.hist-score { font-weight: 700; color: var(--accent-primary); }
+.hist-del { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--text-tertiary); font-size: 1rem; padding: 0 2px; }
+.hist-del:hover { color: var(--danger); }
+
+.slide-enter-active { transition: all 0.3s ease; }
+.slide-enter-from { opacity: 0; transform: translateY(-10px); }
+.slide-leave-active { transition: all 0.2s ease; }
+.slide-leave-to { opacity: 0; transform: translateY(-10px); }
+
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 400px; border: 1px dashed var(--border-color); text-align: center; padding: 40px; color: var(--text-secondary); }
 .empty-icon { font-size: 4rem; margin-bottom: 20px; }
 .empty-state p { max-width: 420px; line-height: 1.6; }
 
-.slide-enter-active { transition: all 0.3s ease; }
-.slide-enter-from { opacity: 0; transform: translateY(-10px); }
 .result-enter-active { transition: all 0.5s ease; }
 .result-enter-from { opacity: 0; transform: translateY(20px); }
 
