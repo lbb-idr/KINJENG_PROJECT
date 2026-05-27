@@ -16,18 +16,87 @@
 
       <!-- Panduan Langkah -->
       <section class="guide-steps">
-        <div class="guide-step" :class="{ active: !simulationType }">
+        <div class="guide-step step-type" :class="{ active: !simulationType }">
           <div class="step-number">1</div>
           <div class="step-body">
             <h3 class="step-title">Pilih Jenis Simulasi</h3>
-            <p class="step-desc">
-              Tentukan jenis simulasi yang sesuai dengan kebutuhan riset Anda.
-              Tersedia pilihan: Akademik, Politik, Market, Sosial, atau Kustom.
+            <p class="step-desc" v-if="!simulationType">
+              Pilih jenis simulasi yang sesuai dengan kebutuhan riset Anda.
             </p>
-            <button class="step-btn" @click="$router.push('/choose-simulation')">
-              {{ simulationType ? 'Ubah Jenis Simulasi' : 'Pilih Sekarang' }}
-              <span class="btn-arrow">→</span>
-            </button>
+
+            <!-- Type Cards (inline) -->
+            <div class="type-grid-mini">
+              <div
+                v-for="t in types" :key="t.id"
+                class="type-card-mini"
+                :class="{ selected: selectedType === t.id }"
+                @click="selectType(t.id)"
+              >
+                <div class="card-icon-mini">{{ t.icon }}</div>
+                <div class="card-body-mini">
+                  <div class="card-title-mini">{{ t.title }}</div>
+                  <div class="card-desc-mini">{{ t.desc }}</div>
+                </div>
+                <div v-if="selectedType === t.id" class="card-check-mini">✓</div>
+              </div>
+            </div>
+
+            <!-- Params Panel (shown when type selected) -->
+            <div v-if="selectedType" class="params-panel-mini">
+              <div class="params-row">
+                <div class="param-item-mini">
+                  <label>Jumlah Agen</label>
+                  <select v-model="params.agentCount" class="param-select-mini">
+                    <option :value="100">100</option>
+                    <option :value="500">500</option>
+                    <option :value="1000">1,000</option>
+                    <option :value="5000">5,000</option>
+                    <option :value="10000">10,000</option>
+                  </select>
+                </div>
+                <div class="param-item-mini">
+                  <label>Ronde</label>
+                  <select v-model="params.maxRounds" class="param-select-mini">
+                    <option :value="5">5</option>
+                    <option :value="10">10</option>
+                    <option :value="20">20</option>
+                    <option :value="50">50</option>
+                  </select>
+                </div>
+                <div class="param-item-mini">
+                  <label>Platform</label>
+                  <select v-model="params.platform" class="param-select-mini">
+                    <option value="twitter">Twitter</option>
+                    <option value="reddit">Reddit</option>
+                    <option value="both">Keduanya</option>
+                  </select>
+                </div>
+                <div v-if="selectedType === 'academic'" class="param-item-mini">
+                  <label>Skala Likert</label>
+                  <select v-model="params.likertScale" class="param-select-mini">
+                    <option :value="5">1-5</option>
+                    <option :value="7">1-7</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="stats-row">
+                <span>{{ params.agentCount.toLocaleString() }} agen</span>
+                <span class="stat-dot">·</span>
+                <span>{{ params.maxRounds }} ronde</span>
+                <span class="stat-dot">·</span>
+                <span>{{ (params.agentCount * params.maxRounds).toLocaleString() }} respon</span>
+                <span class="stat-dot">·</span>
+                <span>{{ params.platform === 'both' ? '2 platform' : '1 platform' }}</span>
+              </div>
+
+              <div class="params-actions-mini">
+                <button class="btn-confirm-type" @click="confirmTypeSelection">
+                  {{ simulationType ? '✓ Ganti ke ' + typeLabels[selectedType] : '✓ Pilih ' + typeLabels[selectedType] }}
+                </button>
+              </div>
+            </div>
+
             <span v-if="simulationType" class="step-done">✓ {{ typeLabels[simulationType] || simulationType }}</span>
           </div>
         </div>
@@ -147,7 +216,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import NavBar from '../components/NavBar.vue'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
@@ -158,14 +227,29 @@ const route = useRoute()
 const formData = ref({ simulationRequirement: '' })
 const files = ref([])
 const loading = ref(false)
-const isDragOver = ref(false)
 const fileInput = ref(null)
 const simulationType = ref(pendingStore.simulationType)
+const selectedType = ref(pendingStore.simulationType || null)
+
+const params = reactive({
+  agentCount: 500,
+  maxRounds: 10,
+  platform: 'both',
+  likertScale: 5
+})
+
+const types = [
+  { id: 'academic', icon: '🎓', title: 'Akademik', desc: 'Kuesioner Likert, pilihan ganda, esai. Hasil statistik deskriptif.', tags: ['Likert', 'Statistik'] },
+  { id: 'political', icon: '🗳️', title: 'Politik', desc: 'Opini publik, preferensi kandidat, isu terkini.', tags: ['Polling', 'Opini'] },
+  { id: 'market', icon: '📊', title: 'Riset Pasar', desc: 'Analisis konsumen, persepsi merek, NPS.', tags: ['Konsumen', 'Brand'] },
+  { id: 'social', icon: '🌐', title: 'Sosial', desc: 'Opini publik bebas, berita viral, dampak kebijakan.', tags: ['Opini', 'Sosial'] },
+  { id: 'custom', icon: '⚙️', title: 'Kustom', desc: 'Upload dokumen dan deskripsi kebutuhan, tentukan skenario.', tags: ['Bebas', 'Kustom'] }
+]
 
 const typeLabels = {
   academic: 'Akademik',
   political: 'Politik',
-  market: 'Market',
+  market: 'Riset Pasar',
   social: 'Sosial',
   custom: 'Kustom'
 }
@@ -174,15 +258,25 @@ const canSubmit = computed(() =>
   simulationType.value && formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
 )
 
+function selectType(id) {
+  selectedType.value = id
+}
+
+function confirmTypeSelection() {
+  if (!selectedType.value) return
+  simulationType.value = selectedType.value
+  setSimulationType(selectedType.value, { ...params })
+}
+
 watch(() => route.query, (query) => {
   if (query.type) {
-    setSimulationType(query.type, {
-      agentCount: Number(query.agentCount) || 500,
-      maxRounds: Number(query.maxRounds) || 10,
-      platform: query.platform || 'both',
-      likertScale: Number(query.likertScale) || 5
-    })
+    selectedType.value = query.type
     simulationType.value = query.type
+    params.agentCount = Number(query.agentCount) || 500
+    params.maxRounds = Number(query.maxRounds) || 10
+    params.platform = query.platform || 'both'
+    params.likertScale = Number(query.likertScale) || 5
+    setSimulationType(query.type, { ...params })
   }
 }, { immediate: true })
 
@@ -451,6 +545,31 @@ const startSimulation = async () => {
 .step-hint.warn {
   color: var(--warning);
 }
+
+/* Inline Type Selection */
+.type-grid-mini { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.type-card-mini { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s; position: relative; }
+.type-card-mini:hover { border-color: var(--accent-primary); }
+.type-card-mini.selected { border-color: var(--black); background: var(--bg-selected); }
+.card-icon-mini { font-size: 1.3rem; width: 32px; text-align: center; flex-shrink: 0; }
+.card-body-mini { flex: 1; min-width: 0; }
+.card-title-mini { font-size: 0.85rem; font-weight: 600; }
+.card-desc-mini { font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; }
+.card-check-mini { position: absolute; top: 6px; right: 8px; font-size: 0.8rem; font-weight: 700; color: var(--success); }
+
+.params-panel-mini { margin-top: 12px; padding: 14px; border: 1px solid var(--border-color); background: var(--bg-secondary); }
+.params-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.param-item-mini { display: flex; flex-direction: column; gap: 3px; min-width: 110px; flex: 1; }
+.param-item-mini label { font-size: 0.68rem; font-weight: 600; color: var(--text-secondary); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+.param-select-mini { padding: 6px 8px; border: 1px solid var(--border-color); background: var(--bg-primary); font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-primary); }
+.param-select-mini:focus { outline: none; border-color: var(--accent-primary); }
+
+.stats-row { font-size: 0.72rem; color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 10px; }
+.stat-dot { margin: 0 4px; }
+
+.params-actions-mini { display: flex; gap: 8px; }
+.btn-confirm-type { width: 100%; padding: 10px; border: none; background: var(--black); color: var(--white); font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-confirm-type:hover { background: var(--accent-primary); }
 
 /* Feature Section */
 .feature-section {
