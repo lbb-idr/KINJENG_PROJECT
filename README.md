@@ -2,15 +2,17 @@
 
 **Platform Simulasi Multi-Agent untuk Riset Sosial**
 
-KINJENG_PROJECT adalah platform simulasi multi-agent untuk pemodelan sosiokultural berbasis kognisi agen kecerdasan buatan. Mengombinasikan graph pengetahuan interaktif dengan mesin rujukan sosiologis untuk menyajikan simulasi data sosial se-presisi mungkin.
+KINJENG_PROJECT bikin simulasi sosial pakai AI. Kamu upload dokumen, terus AI bikin agen-agen virtual (orang-orang digital) yang punya kepribadian, ingatan, dan cara berpikir sendiri. Mereka bakal berinteraksi, ngobrol, debat — mirip dunia nyata. Hasilnya bisa kamu lihat dalam bentuk grafik, statistik, dan laporan PDF.
+
+Gampangnya: **kamu kasih data → AI bikin masyarakat digital → mereka "hidup" dan berinteraksi → kamu lihat hasilnya.**
 
 ## Fitur
 
-- **Engine Simulasi V1.0** — Model simulasi kognitif agen sosiokultural
-- **Graph Interaksi** — Visualisasi riil jaringan korelasi komunikasi
-- **Consensus Debating** — Diskursus internal tandingan multi-perspektif
-- **Tabulasi Analitik** — Statistik distribusi frekuensi & tabulasi silang
-- **Laporan PDF** — Generate laporan simulasi otomatis
+- **Simulasi Sosial** — Bikin agen AI dengan kepribadian beda-beda, mereka saling ngobrol dan berdebat
+- **Graph Interaksi** — Lihat hubungan antar agen dalam bentuk peta visual
+- **Debat Internal** — Setiap agen punya "suara" berbeda (rasional, emosional, dll) yang debat sebelum ambil keputusan
+- **Statistik & Laporan** — Hasil simulasi diolah otomatis jadi tabel, grafik, dan laporan PDF
+- **5 Tipe Simulasi** — Akademik, Politik, Pasar, Sosial, atau Kustom
 
 ## Tech Stack
 
@@ -21,11 +23,9 @@ KINJENG_PROJECT adalah platform simulasi multi-agent untuk pemodelan sosiokultur
 | Database | SQLite |
 | Graph | Zep + Neo4j |
 
-## Simulasi
+## Engine Simulasi
 
-KINJENG_PROJECT menggunakan **[MiroFish](https://github.com/666ghj/MiroFish)** sebagai engine simulasi multi-agent inti. MiroFish adalah platform simulasi sosial berbasis agen kecerdasan buatan dengan arsitektur kognitif Inner Parliament, memori temporal, dan pipeline simulasi lengkap (graph → environment → simulasi → laporan → interaksi).
-
-Engine simulasi MiroFish didukung oleh **[OASIS (Open Agent Social Interaction Simulations)](https://github.com/camel-ai/oasis)** dari CAMEL-AI untuk simulasi interaksi agen di platform sosial.
+KINJENG_PROJECT pakai **[MiroFish](https://github.com/666ghj/MiroFish)** sebagai mesin simulasi utamanya. MiroFish adalah engine buat simulasi sosial AI yang udah mature. Didukung sama **[OASIS](https://github.com/camel-ai/oasis)** dari CAMEL-AI buat simulasi interaksi agen di platform sosial.
 
 ## Development
 
