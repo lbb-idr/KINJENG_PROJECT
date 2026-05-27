@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./static/image/KINJENG_Project_logo.jpeg" alt="KINJENG_PROJECT Logo" width="400"/>
+  <img src="./static/image/kinjeng-preview.png" alt="KINJENG_PROJECT Logo" width="400"/>
 </p>
 
 <h1 align="center">KINJENG_PROJECT</h1>
