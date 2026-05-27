@@ -19,8 +19,13 @@ KINJENG_PROJECT adalah platform simulasi multi-agent untuk pemodelan sosiokultur
 | Frontend | Vue 3 + Vite + D3.js |
 | Backend | Python Flask + Gunicorn |
 | Database | SQLite |
-| Simulasi | OASIS (Open Agent Social Interaction Simulations) |
 | Graph | Zep + Neo4j |
+
+## Simulasi
+
+KINJENG_PROJECT menggunakan **[MiroFish](https://github.com/666ghj/MiroFish)** sebagai engine simulasi multi-agent inti. MiroFish adalah platform simulasi sosial berbasis agen kecerdasan buatan dengan arsitektur kognitif Inner Parliament, memori temporal, dan pipeline simulasi lengkap (graph → environment → simulasi → laporan → interaksi).
+
+Engine simulasi MiroFish didukung oleh **[OASIS (Open Agent Social Interaction Simulations)](https://github.com/camel-ai/oasis)** dari CAMEL-AI untuk simulasi interaksi agen di platform sosial.
 
 ## Development
 
@@ -42,4 +47,4 @@ Deployed on Railway: `https://mirofish-production-c68d.up.railway.app`
 
 ---
 
-*Dibuat untuk #JuaraVibeCoding 2026*
+*Dibuat untuk #JuaraVibeCoding 2026 — Engine simulasi oleh [MiroFish](https://github.com/666ghj/MiroFish)*
