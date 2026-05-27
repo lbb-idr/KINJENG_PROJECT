@@ -10,6 +10,11 @@ const state = reactive({
     maxRounds: 10,
     platform: 'both',
     likertScale: 5
+  },
+  customScenario: {
+    title: '',
+    context: '',
+    agentRules: ''
   }
 })
 
@@ -25,7 +30,8 @@ export function getPendingUpload() {
     simulationRequirement: state.simulationRequirement,
     isPending: state.isPending,
     simulationType: state.simulationType,
-    surveyParams: { ...state.surveyParams }
+    surveyParams: { ...state.surveyParams },
+    customScenario: { ...state.customScenario }
   }
 }
 
@@ -42,12 +48,19 @@ export function clearAll() {
   state.isPending = false
   state.simulationType = null
   state.surveyParams = { agentCount: 500, maxRounds: 10, platform: 'both', likertScale: 5 }
+  state.customScenario = { title: '', context: '', agentRules: '' }
 }
 
 export function setSimulationType(type, params) {
   state.simulationType = type
   if (params) {
     state.surveyParams = { ...state.surveyParams, ...params }
+  }
+}
+
+export function setCustomScenario(scenario) {
+  if (scenario) {
+    state.customScenario = { ...state.customScenario, ...scenario }
   }
 }
 

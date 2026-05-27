@@ -90,6 +90,24 @@
                 <span>{{ params.platform === 'both' ? '2 platform' : '1 platform' }}</span>
               </div>
 
+              <!-- Scenario builder for Kustom -->
+              <div v-if="selectedType === 'custom'" class="scenario-section">
+                <div class="scenario-fields">
+                  <div class="scenario-field">
+                    <label>Judul Skenario</label>
+                    <input v-model="customScenario.title" type="text" class="scenario-input" placeholder="Misal: Debat Pilkada 2029, Respons Masyarakat terhadap UU Ciptaker..." />
+                  </div>
+                  <div class="scenario-field">
+                    <label>Konteks / Latar Belakang</label>
+                    <textarea v-model="customScenario.context" class="scenario-textarea" rows="3" placeholder="Jelaskan situasi, isu, atau fenomena yang menjadi dasar simulasi ini..."></textarea>
+                  </div>
+                  <div class="scenario-field">
+                    <label>Aturan & Perilaku Agen</label>
+                    <textarea v-model="customScenario.agentRules" class="scenario-textarea" rows="3" placeholder="Bagaimana agen harus bersikap? Misal: agen terbagi dalam 2 kubu pro-kontra, agen netral, agen berdasarkan demografi tertentu..."></textarea>
+                  </div>
+                </div>
+              </div>
+
               <div class="params-actions-mini">
                 <button class="btn-confirm-type" @click="confirmTypeSelection">
                   {{ simulationType ? '✓ Ganti ke ' + typeLabels[selectedType] : '✓ Pilih ' + typeLabels[selectedType] }}
@@ -220,7 +238,7 @@ import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import NavBar from '../components/NavBar.vue'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
-import pendingStore, { setSimulationType, setPendingUpload } from '../store/pendingUpload.js'
+import pendingStore, { setSimulationType, setPendingUpload, setCustomScenario } from '../store/pendingUpload.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -230,6 +248,7 @@ const loading = ref(false)
 const fileInput = ref(null)
 const simulationType = ref(pendingStore.simulationType)
 const selectedType = ref(pendingStore.simulationType || null)
+const customScenario = reactive({ ...pendingStore.customScenario })
 
 const params = reactive({
   agentCount: 500,
@@ -266,6 +285,9 @@ function confirmTypeSelection() {
   if (!selectedType.value) return
   simulationType.value = selectedType.value
   setSimulationType(selectedType.value, { ...params })
+  if (selectedType.value === 'custom') {
+    setCustomScenario({ ...customScenario })
+  }
 }
 
 watch(() => route.query, (query) => {
@@ -277,6 +299,12 @@ watch(() => route.query, (query) => {
     params.platform = query.platform || 'both'
     params.likertScale = Number(query.likertScale) || 5
     setSimulationType(query.type, { ...params })
+    if (query.type === 'custom') {
+      customScenario.title = query.scenarioTitle || ''
+      customScenario.context = query.scenarioContext || ''
+      customScenario.agentRules = query.scenarioRules || ''
+      setCustomScenario({ ...customScenario })
+    }
   }
 }, { immediate: true })
 
@@ -290,6 +318,9 @@ const removeFile = (index) => { files.value.splice(index, 1) }
 const startSimulation = async () => {
   if (!canSubmit.value || loading.value) return
   loading.value = true
+  if (simulationType.value === 'custom') {
+    setCustomScenario({ ...customScenario })
+  }
   setPendingUpload(files.value, formData.value.simulationRequirement)
   await nextTick()
   router.push({ name: 'Process', params: { projectId: 'new' } })
@@ -641,6 +672,69 @@ const startSimulation = async () => {
   border: 1px solid var(--border-color);
   font-family: var(--font-mono);
   color: var(--text-secondary);
+}
+
+/* Scenario Builder (Kustom) */
+.scenario-section {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px dashed var(--accent-primary);
+  background: var(--bg-primary);
+}
+.scenario-section::before {
+  content: '✎ Skenario Kustom';
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+.scenario-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.scenario-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.scenario-field label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.scenario-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  outline: none;
+}
+.scenario-input:focus {
+  border-color: var(--accent-primary);
+}
+.scenario-textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  resize: vertical;
+  outline: none;
+  line-height: 1.5;
+}
+.scenario-textarea:focus {
+  border-color: var(--accent-primary);
 }
 
 @media (max-width: 700px) {
