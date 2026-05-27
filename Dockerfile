@@ -1,29 +1,24 @@
-FROM python:3.11
-
-# 安装 Node.js （满足 >=18）及必要工具
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends nodejs npm \
-  && rm -rf /var/lib/apt/lists/*
-
-# 从 uv 官方镜像复制 uv
-COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# 先复制依赖描述文件以利用缓存
-COPY package.json package-lock.json ./
-COPY frontend/package.json frontend/package-lock.json ./frontend/
-COPY backend/pyproject.toml backend/uv.lock ./backend/
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-# 安装依赖（Node + Python）
-RUN npm ci \
-  && npm ci --prefix frontend \
-  && cd backend && uv sync --frozen
+# Copy dependency files
+COPY backend/requirements.txt .
 
-# 复制项目源码
-COPY . .
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 3000 5001
+# Copy backend source code
+COPY backend/ .
 
-# 同时启动前后端（开发模式）
-CMD ["npm", "run", "dev"]
+# Create uploads directory
+RUN mkdir -p uploads/simulations
+
+EXPOSE 5001
+
+CMD gunicorn wsgi:app -b 0.0.0.0:${PORT:-5001} --workers 2 --threads 2 --timeout 120 --log-level info
