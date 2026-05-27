@@ -503,4 +503,55 @@ function confirmType() {
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 20px;
+  }
+  .selector-title {
+    font-size: 1.8rem;
+  }
+  .selector-desc {
+    font-size: 0.9rem;
+  }
+  .step-indicator {
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.7rem;
+  }
+  .step-connector {
+    width: 12px;
+  }
+  .type-grid {
+    grid-template-columns: 1fr;
+  }
+  .params-grid {
+    grid-template-columns: 1fr;
+  }
+  .params-panel {
+    padding: 20px;
+  }
+  .stats-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .stat-item {
+    flex: 1 1 45%;
+  }
+  .params-actions {
+    flex-direction: column;
+  }
+  .params-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .selector-title {
+    font-size: 1.4rem;
+  }
+  .stat-item {
+    flex: 1 1 100%;
+  }
+}
 </style>

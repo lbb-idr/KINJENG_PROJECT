@@ -2355,7 +2355,33 @@ watch(() => props.reportId, (newId) => {
 }
 
 .left-panel:hover::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: #9CA3AF;
+}
+
+@media (max-width: 768px) {
+  .main-split-layout {
+    flex-direction: column !important;
+  }
+  .left-panel.report-style {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: 50vh;
+    padding: 20px !important;
+    border-right: none !important;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  .right-panel {
+    flex: 1;
+    min-height: 200px;
+  }
+}
+
+/* Right Panel - Agent Log/Diagram */
+.right-panel {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .left-panel::-webkit-scrollbar-thumb:hover {

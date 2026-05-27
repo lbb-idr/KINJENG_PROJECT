@@ -87,6 +87,67 @@ function shutdownServer() {
 ::-webkit-scrollbar-thumb { background: var(--text-tertiary); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 
-button { font-family: inherit; }
+button { font-family: inherit; cursor: pointer; }
 a { color: inherit; }
+
+/* ===== Global Responsive Utilities ===== */
+
+/* Mobile: stack dual-panel layouts vertically */
+@media (max-width: 768px) {
+  .content-area {
+    flex-direction: column !important;
+  }
+  .content-area > .panel-wrapper {
+    width: 100% !important;
+    height: 50% !important;
+    opacity: 1 !important;
+    transform: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
+
+/* Mobile: adjust header spacing */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 12px !important;
+    gap: 8px;
+  }
+  .header-center {
+    position: static !important;
+    transform: none !important;
+  }
+  .app-header .brand {
+    font-size: 14px !important;
+  }
+  .step-divider {
+    display: none !important;
+  }
+  .workflow-step .step-name {
+    display: none !important;
+  }
+  .step-num {
+    font-size: 11px !important;
+  }
+  .view-switcher .switch-btn {
+    padding: 4px 8px !important;
+    font-size: 10px !important;
+  }
+  .header-right {
+    gap: 8px !important;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .app-header .brand {
+    display: none !important;
+  }
+  .view-switcher .switch-btn {
+    font-size: 9px !important;
+    padding: 3px 6px !important;
+  }
+}
+
+/* ===== End Global Responsive Utilities ===== */
 </style>
