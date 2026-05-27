@@ -203,15 +203,16 @@ def generate_report():
         }), 500
 
 
-@report_bp.route('/generate/status', methods=['POST'])
+@report_bp.route('/generate/status', methods=['GET', 'POST'])
 def get_generate_status():
     """
     查询报告生成任务进度
     
-    请求（JSON）：
+    请求（JSON for POST, query params for GET）：
         {
             "task_id": "task_xxxx",         // 可选，generate返回的task_id
             "simulation_id": "sim_xxxx"     // 可选，模拟ID
+            "report_id": "report_xxxx"      // 可选，报告ID
         }
     
     返回：
@@ -226,7 +227,10 @@ def get_generate_status():
         }
     """
     try:
-        data = request.get_json() or {}
+        if request.method == 'GET':
+            data = request.args.to_dict()
+        else:
+            data = request.get_json() or {}
         
         task_id = data.get('task_id')
         simulation_id = data.get('simulation_id')
