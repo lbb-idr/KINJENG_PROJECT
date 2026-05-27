@@ -10,7 +10,7 @@ Alur kerjanya: **unggah data → AI menciptakan masyarakat digital → agen beri
 
 ## Filosofi
 
-**Kinjeng** (capung dalam bahasa Jawa, termasuk dialek Indramayu) memiliki empat sifat yang menjadi fondasi proyek ini:
+**Kinjeng** (capung dalam bahasa Jawa) memiliki empat sifat yang menjadi fondasi proyek ini:
 
 1. **Mata Majemuk** — Capung dapat melihat hampir 360° dengan presisi tinggi. Seperti itulah AI dalam platform ini: mampu mengamati dan memetakan dinamika sosial dari berbagai sudut pandang secara simultan, mengatasi keterbatasan survei manual yang sempit.
 
