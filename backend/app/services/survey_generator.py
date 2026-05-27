@@ -267,6 +267,118 @@ PEDOMAN AGENT-AWARE (WAJIB):
                         q['labels'] = ["STS", "TS", "N", "S", "SS"]
 
     @classmethod
+    def generate_interrogation(
+        cls,
+        agent_id: str,
+        agent_profile: Dict[str, Any],
+        initial_answers: List[Dict[str, Any]],
+        original_survey: Dict[str, Any],
+        requirement: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate personalized interrogation/follow-up questions for ONE agent
+        based on their Phase 1 answers + identity profile.
+        
+        Ini adalah fase 'deep interrogation': setelah agen menjawab survei awal,
+        kita gali lebih dalam — tanya 'mengapa', probe kontradiksi, dan referensi
+        latar belakang spesifik agen.
+        """
+        identity_ctx = ""
+        try:
+            sig = get_signature(agent_id)
+            if sig:
+                identity_ctx = (
+                    f"Typicality: {sig.typicality:.2f}, "
+                    f"Opinion bias: {sig.opinion_bias:.2f}, "
+                    f"Openness: {sig.openness:.2f}, "
+                    f"Education factor: {sig.education_factor:.2f}"
+                )
+        except Exception:
+            pass
+
+        # Summarize the agent's initial answers
+        answers_summary = "\n".join(
+            f"Q: {a.get('question', a.get('question_text', '?'))[:100]}"
+            f"\nA: {a.get('answer', a.get('text_answer', '(no answer)'))[:200]}"
+            for a in initial_answers[:8]
+        ) if initial_answers else "(belum ada jawaban)"
+
+        profile_summary = (
+            f"Usia: {agent_profile.get('age', '?')}, "
+            f"Pekerjaan: {agent_profile.get('occupation', agent_profile.get('profession', '?'))}, "
+            f"Kepribadian: {agent_profile.get('personality', '?')} ({agent_profile.get('mbti', '?')}), "
+            f"Gaya Kognitif: {agent_profile.get('cognitive_style', '?')}, "
+            f"Pengetahuan: {agent_profile.get('knowledge_level', '?')}, "
+            f"Opini: {agent_profile.get('opinion_bias', '?')}"
+        )
+
+        prompt = f"""Anda adalah pewawancara riset yang mendalami opini seorang responden.
+
+PROFIL RESPONDEN:
+{profile_summary}
+{identity_ctx}
+
+JAWABAN AWAL Responden:
+{answers_summary}
+
+TOPIK RISET: {requirement}
+
+Tugas Anda: Buat 3-5 pertanyaan FOLLOW-UP yang mendalam untuk responden ini.
+Setiap pertanyaan harus:
+1. Merujuk pada jawaban awal responden — "Anda sebelumnya menjawab X, mengapa?"
+2. Menantang asumsi atau kontradiksi dalam jawaban mereka
+3. Menggali RASIONAL di balik opini, bukan hanya mengulang pertanyaan pertama
+4. Menyebut latar belakang spesifik responden (pekerjaan, kepribadian, gaya kognitif)
+
+Contoh pertanyaan interrogasi yang BAGUS:
+- "Anda menjawab 'Setuju' pada kebijakan PPN 12%. Sebagai seorang {profesi}, bagaimana kebijakan ini secara langsung mempengaruhi pekerjaan Anda sehari-hari?"
+- "Anda yang memiliki gaya kognitif analitis cenderung mendukung kebijakan ini. Apakah ada data atau bukti spesifik yang mendasari keyakinan Anda?"
+- "Jawaban Anda tentang isu X tampak bertentangan dengan profesi Anda sebagai {profesi}. Bisakah Anda menjelaskan?"
+
+Output JSON ARRAY:
+[
+  {{
+    "id": "int_q01",
+    "type": "open",
+    "text": "Pertanyaan follow-up...",
+    "max_length": 500,
+    "refers_to": "q03"
+  }}
+]
+
+Minimal 3 pertanyaan, maksimal 5. Wajib open-ended (bukan likert/mcq)."""
+        
+        try:
+            llm = LLMClient(temperature=0.8, max_tokens=2048)
+            response = llm.chat(
+                messages=[
+                    {"role": "system", "content": "Anda adalah pewawancara riset yang ahli."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+            questions = json.loads(response)
+            if isinstance(questions, dict) and 'questions' in questions:
+                questions = questions['questions']
+            if not isinstance(questions, list):
+                questions = [questions]
+            # Validate each question
+            for q in questions:
+                if 'type' not in q:
+                    q['type'] = 'open'
+                if 'max_length' not in q:
+                    q['max_length'] = 500
+            return questions[:5]
+        except Exception as e:
+            logger.warning(f"Interrogation gen failed for {agent_id}: {e}")
+            return [{
+                "id": f"int_{agent_id}_q01",
+                "type": "open",
+                "text": f"Anda menjawab {initial_answers[0].get('answer', '?')[:50] if initial_answers else '?'} untuk pertanyaan sebelumnya. Bisakah Anda jelaskan lebih lanjut alasan di balik jawaban Anda?",
+                "max_length": 500
+            }]
+
+    @classmethod
     def enhance_existing(cls, survey: Dict[str, Any], feedback: str) -> Dict[str, Any]:
         """Use LLM to enhance an existing survey based on feedback."""
         survey_json = json.dumps(survey, ensure_ascii=False)[:4000]

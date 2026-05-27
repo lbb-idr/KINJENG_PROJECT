@@ -21,13 +21,15 @@ logger = get_logger('kinjeng.api.survey_engine')
 @survey_bp.route('/generate', methods=['POST'])
 def generate_survey():
     """
-    Generate an academic survey from requirement + optional document context.
+    Generate an academic survey from requirement + optional document context + agent profiles.
     
     Body:
         requirement: str (required) — Natural language research requirement
         sim_type: str — Simulation type (default: academic)
         params: dict — Survey parameters
         document_context: str (optional) — Extracted text from uploaded docs
+        project_id: str (optional) — Jika ada, auto-load agent profiles dari simulation
+        agent_profiles: list (optional) — Langsung kirim profile list (skip auto-load)
     """
     try:
         data = request.get_json(force=True)
@@ -35,16 +37,41 @@ def generate_survey():
         sim_type = data.get('sim_type', 'academic')
         params = data.get('params', {})
         document_context = data.get('document_context')
+        project_id = data.get('project_id')
 
         if not requirement:
             return jsonify({"success": False, "error": "requirement is required"}), 400
 
-        logger.info(f"Generating survey: type={sim_type}")
-        survey = SurveyGenerator.generate(requirement, sim_type, params, document_context)
+        # Load agent profiles for context-aware question generation
+        agent_profiles = data.get('agent_profiles')
+        if not agent_profiles and project_id:
+            try:
+                from ..services.simulation_manager import SimulationManager
+                from ..models.project import ProjectManager
+                manager = SimulationManager()
+                project = ProjectManager().get_project(project_id)
+                if project and getattr(project, 'simulation_id', None):
+                    profiles = manager.get_profiles(project.simulation_id, platform='reddit')
+                    if not profiles:
+                        profiles = manager.get_profiles(project.simulation_id, platform='twitter')
+                    if profiles:
+                        topic = requirement or params.get('topic', '')
+                        from ..services.survey_service import AcademicPersonaGenerator
+                        agent_profiles = AcademicPersonaGenerator.map_simulation_to_survey(profiles[:params.get('agentCount', 500)], topic)
+                        logger.info(f"Loaded {len(agent_profiles)} agent profiles for context-aware question gen")
+            except Exception as e:
+                logger.warning(f"Could not load agent profiles for question gen: {e}")
+
+        logger.info(f"Generating survey: type={sim_type}, agent_profiles={len(agent_profiles) if agent_profiles else 'none'}")
+        survey = SurveyGenerator.generate(requirement, sim_type, params, document_context, agent_profiles)
 
         return jsonify({
             "success": True,
-            "data": survey
+            "data": {
+                **survey,
+                "_agent_aware": bool(agent_profiles),
+                "_agent_count": len(agent_profiles) if agent_profiles else 0
+            }
         })
 
     except Exception as e:
@@ -84,7 +111,7 @@ def enhance_survey():
 @survey_bp.route('/run', methods=['POST'])
 def run_survey():
     """
-    Execute a complete survey simulation.
+    Execute a complete survey simulation (2-phase: initial + optional interrogation).
     
     Body:
         project_id: str (required)
@@ -92,6 +119,8 @@ def run_survey():
         agent_count: int — Number of agent personas (default: 100)
         use_llm: bool — Use LLM for debate (default: false for speed)
         save_results: bool — Persist results (default: true)
+        enable_interrogation: bool — Generate personalized follow-up per agent (default: false)
+        requirement: str (optional) — Original research requirement, needed for interrogation
     """
     try:
         data = request.get_json(force=True)
@@ -100,11 +129,13 @@ def run_survey():
         agent_count = min(int(data.get('agent_count', 100)), 10000)
         use_llm = data.get('use_llm', False)
         save_results = data.get('save_results', True)
+        enable_interrogation = data.get('enable_interrogation', False)
+        requirement = data.get('requirement', survey_config.get('title', ''))
 
         if not project_id or not survey_config:
             return jsonify({"success": False, "error": "project_id and survey are required"}), 400
 
-        logger.info(f"Running survey: project={project_id}, agents={agent_count}, llm={use_llm}")
+        logger.info(f"Running survey: project={project_id}, agents={agent_count}, llm={use_llm}, interrogation={enable_interrogation}")
 
         # Try to load real simulation agents first
         personas = None
@@ -129,25 +160,86 @@ def run_survey():
             personas = AcademicPersonaGenerator.generate_batch(agent_count)
             logger.info(f"Generated {len(personas)} random agent personas for survey")
 
+        # ── Phase 1: Initial survey ──
         engine = SurveyEngine(project_id, use_llm=use_llm, agent_profiles=personas)
         engine.load_survey(survey_config)
         engine.load_personas(personas)
-        results = engine.run_survey()
+        phase1_results = engine.run_survey()
+
+        # ── Phase 2: Interrogation (per-agent personalized follow-up) ──
+        interrogation_data = None
+        if enable_interrogation:
+            logger.info(f"Generating interrogation questions for {len(personas)} agents...")
+            req_text = requirement or survey_config.get('title', survey_config.get('description', ''))
+            
+            # Build interrogation section: for each agent, generate personalized questions
+            interrogation_section = {
+                "id": "interrogation",
+                "title": "Pendalaman Opini",
+                "description": "Pertanyaan follow-up personal berdasarkan jawaban sebelumnya.",
+                "questions": []
+            }
+            
+            agent_results = {
+                r.get('agent_id'): r
+                for r in phase1_results.get('results', [])
+            }
+            
+            for persona in personas:
+                agent_id = str(persona.get('agent_id', persona.get('user_id', 'unknown')))
+                agent_result = agent_results.get(agent_id, {})
+                initial_answers = agent_result.get('responses', [])
+                
+                int_questions = SurveyGenerator.generate_interrogation(
+                    agent_id=agent_id,
+                    agent_profile=persona,
+                    initial_answers=initial_answers,
+                    original_survey=survey_config,
+                    requirement=req_text
+                )
+                interrogation_section["questions"].extend(int_questions)
+            
+            if interrogation_section["questions"]:
+                logger.info(f"Generated {len(interrogation_section['questions'])} interrogation questions total")
+                
+                # Run Phase 2 with interrogation questions
+                int_survey = {
+                    **survey_config,
+                    "sections": [interrogation_section],
+                    "_phase": "interrogation"
+                }
+                engine2 = SurveyEngine(f"{project_id}_int", use_llm=use_llm, agent_profiles=personas)
+                engine2.load_survey(int_survey)
+                engine2.load_personas(personas)
+                phase2_results = engine2.run_survey()
+                
+                interrogation_data = {
+                    "total_questions": len(interrogation_section["questions"]),
+                    "results": phase2_results.get("results", [])
+                }
+
+        # Combine results
+        combined_results = phase1_results
+        if interrogation_data:
+            combined_results["_interrogation"] = interrogation_data
+            combined_results["total_questions"] = (combined_results.get("total_questions", 0) 
+                                                    + interrogation_data["total_questions"])
 
         if save_results:
-            SurveyResultStore.save(project_id, results)
+            SurveyResultStore.save(project_id, combined_results)
 
-        stats = SurveyStatistics.compute_all(results)
+        stats = SurveyStatistics.compute_all(combined_results)
 
         return jsonify({
             "success": True,
             "data": {
                 "project_id": project_id,
-                "total_agents": results.get("total_agents"),
-                "total_questions": results.get("total_questions"),
-                "likert_scale": results.get("likert_scale"),
-                "results": results.get("results", []),
-                "statistics": stats
+                "total_agents": combined_results.get("total_agents"),
+                "total_questions": combined_results.get("total_questions"),
+                "likert_scale": combined_results.get("likert_scale"),
+                "results": combined_results.get("results", []),
+                "statistics": stats,
+                "interrogation": interrogation_data
             }
         })
 
