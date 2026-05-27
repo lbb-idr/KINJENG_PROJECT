@@ -186,7 +186,8 @@ class OntologyGenerator:
         self,
         document_texts: List[str],
         simulation_requirement: str,
-        additional_context: Optional[str] = None
+        additional_context: Optional[str] = None,
+        simulation_type: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         生成本体定义
@@ -195,6 +196,7 @@ class OntologyGenerator:
             document_texts: 文档文本列表
             simulation_requirement: 模拟需求描述
             additional_context: 额外上下文
+            simulation_type: 模拟类型（academic/business/political/social/custom）
             
         Returns:
             本体定义（entity_types, edge_types等）
@@ -203,7 +205,8 @@ class OntologyGenerator:
         user_message = self._build_user_message(
             document_texts, 
             simulation_requirement,
-            additional_context
+            additional_context,
+            simulation_type
         )
         
         lang_instruction = get_language_instruction()
@@ -232,7 +235,8 @@ class OntologyGenerator:
         self,
         document_texts: List[str],
         simulation_requirement: str,
-        additional_context: Optional[str]
+        additional_context: Optional[str],
+        simulation_type: Optional[str] = None
     ) -> str:
         """构建用户消息"""
         
@@ -245,31 +249,55 @@ class OntologyGenerator:
             combined_text = combined_text[:self.MAX_TEXT_LENGTH_FOR_LLM]
             combined_text += f"\n\n...(原文共{original_length}字，已截取前{self.MAX_TEXT_LENGTH_FOR_LLM}字用于本体分析)..."
         
-        message = f"""## 模拟需求
+        # Template-specific guidance untuk entity types
+        type_guidance = {
+            'academic': """Simulasi ini bertipe **AKADEMIK — Riset Ilmiah**.
+Fokus pada entitas: Researcher, Professor, Student, University, ResearchLab, Journal, StudyField.
+Hubungan: WORKS_AT, STUDIES_AT, PUBLISHES_IN, COLLABORATES_WITH.""",
+            'business': """Simulasi ini bertipe **BISNIS — Riset Pasar**.
+Fokus pada entitas: Company, Product, Customer, Competitor, Investor, Market, Brand, Employee.
+Hubungan: COMPETES_WITH, SUPPLIES, OWNS, PARTNERS_WITH, SELLS_TO.""",
+            'political': """Simulasi ini bertipe **POLITIK — Opini Publik & Kebijakan**.
+Fokus pada entitas: Politician, PoliticalParty, GovernmentAgency, Voter, Policy, MediaOutlet, Activist.
+Hubungan: SUPPORTS, OPPOSES, REPORTS_ON, WORKS_FOR, LEADS.""",
+            'social': """Simulasi ini bertipe **SOSIAL — Opini Publik Bebas**.
+Fokus pada campuran entitas dari berbagai domain: individu, organisasi, media, pemerintah.
+Hubungan mencakup interaksi sosial umum: FOLLOWS, MENTIONS, REPLIES_TO, SHARES.""",
+            'custom': """Simulasi ini bertipe **KUSTOM — Ditentukan Pengguna**.
+Gunakan konten dokumen sebagai acuan utama tanpa bias template tertentu."""
+        }
+        
+        guidance = type_guidance.get(simulation_type, type_guidance['custom'])
+        
+        message = f"""## Tipe Simulasi
+
+{guidance}
+
+## Deskripsi Kebutuhan
 
 {simulation_requirement}
 
-## 文档内容
+## Dokumen Konten
 
 {combined_text}
 """
         
         if additional_context:
             message += f"""
-## 额外说明
+## Konteks Tambahan
 
 {additional_context}
 """
         
         message += """
-请根据以上内容，设计适合社会舆论模拟的实体类型和关系类型。
+Berdasarkan dokumen dan tipe simulasi di atas, buat entity types dan edge types yang sesuai.
 
-**必须遵守的规则**：
-1. 必须正好输出10个实体类型
-2. 最后2个必须是兜底类型：Person（个人兜底）和 Organization（组织兜底）
-3. 前8个是根据文本内容设计的具体类型
-4. 所有实体类型必须是现实中可以发声的主体，不能是抽象概念
-5. 属性名不能使用 name、uuid、group_id 等保留字，用 full_name、org_name 等替代
+**Aturan Wajib**:
+1. Output tepat 10 entity types
+2. 2 terakhir = Person (tenggat individu) dan Organization (tenggat organisasi)
+3. 8 pertama spesifik dari konten + tipe simulasi
+4. Semua entity harus bisa "bersuara" di media sosial (bukan konsep abstrak)
+5. Hindari attribute name `name`, `uuid`, `group_id` — pakai `full_name`, `org_name`, dll
 """
         
         return message

@@ -1401,6 +1401,59 @@ async def run_twitter_simulation(
                     total_actions += 1
                     round_action_count += 1
         
+        # === Twitter: Forced actions jika round_action_count < MIN_ACTIONS ===
+        MIN_ACTIONS_PER_ROUND = 5
+        if round_action_count < MIN_ACTIONS_PER_ROUND:
+            forced_needed = MIN_ACTIONS_PER_ROUND - round_action_count
+            forced_agents = []
+            all_agent_ids = list(agent_names.keys())
+            random.shuffle(all_agent_ids)
+            for aid in all_agent_ids:
+                if aid not in [a[0] for a in active_agents]:
+                    forced_agents.append(aid)
+                    if len(forced_agents) >= forced_needed:
+                        break
+            
+            sim_ctx = config.get("simulation_requirement", "simulasi ini")[:100]
+            forced_action_types = ["CREATE_POST", "CREATE_POST", "REPLY_POST", "LIKE_POST", "REPOST"]
+            
+            for fa_idx, fa_id in enumerate(forced_agents):
+                try:
+                    fa_agent = result.env.agent_graph.get_agent(fa_id)
+                    fa_name = agent_names.get(fa_id, f"Agent_{fa_id}")
+                    fa_type = forced_action_types[fa_idx % len(forced_action_types)]
+                    
+                    if fa_type == "CREATE_POST":
+                        fa_content = f"Menurut saya, dalam konteks {sim_ctx}, hal ini perlu didiskusikan lebih lanjut. #{simulated_day}H-{simulated_hour:02d}"
+                    elif fa_type == "REPLY_POST":
+                        fa_content = f"Saya setuju, poin ini menarik untuk dibahas lebih dalam terkait {sim_ctx}."
+                    else:
+                        fa_content = ""
+                    
+                    if fa_type in ("CREATE_POST", "REPLY_POST"):
+                        args = {"content": fa_content}
+                    else:
+                        args = {}
+                    
+                    forced_action = ManualAction(
+                        action_type=ActionType.__members__.get(fa_type, ActionType.CREATE_POST),
+                        action_args=args
+                    )
+                    await result.env.step({fa_agent: forced_action})
+                    
+                    if action_logger:
+                        action_logger.log_action(
+                            round_num=round_num + 1,
+                            agent_id=fa_id,
+                            agent_name=fa_name,
+                            action_type=fa_type,
+                            action_args=args
+                        )
+                        total_actions += 1
+                        round_action_count += 1
+                except Exception:
+                    pass
+
         if action_logger:
             action_logger.log_round_end(round_num + 1, round_action_count)
         
@@ -1618,6 +1671,59 @@ async def run_reddit_simulation(
                     total_actions += 1
                     round_action_count += 1
         
+        # === Reddit: Forced actions jika round_action_count < MIN_ACTIONS ===
+        MIN_ACTIONS_PER_ROUND = 5
+        if round_action_count < MIN_ACTIONS_PER_ROUND:
+            forced_needed = MIN_ACTIONS_PER_ROUND - round_action_count
+            forced_agents = []
+            all_agent_ids = list(agent_names.keys())
+            random.shuffle(all_agent_ids)
+            for aid in all_agent_ids:
+                if aid not in [a[0] for a in active_agents]:
+                    forced_agents.append(aid)
+                    if len(forced_agents) >= forced_needed:
+                        break
+            
+            sim_ctx = config.get("simulation_requirement", "simulasi ini")[:100]
+            reddit_forced_types = ["CREATE_POST", "CREATE_COMMENT", "LIKE_POST", "DISLIKE_POST", "CREATE_COMMENT"]
+            
+            for fa_idx, fa_id in enumerate(forced_agents):
+                try:
+                    fa_agent = result.env.agent_graph.get_agent(fa_id)
+                    fa_name = agent_names.get(fa_id, f"Agent_{fa_id}")
+                    fa_type = reddit_forced_types[fa_idx % len(reddit_forced_types)]
+                    
+                    if fa_type == "CREATE_POST":
+                        fa_content = f"Pembahasan tentang {sim_ctx} — mari kita diskusikan. #{simulated_day}H-{simulated_hour:02d}"
+                    elif fa_type == "CREATE_COMMENT":
+                        fa_content = f"Saya berpendapat bahwa dalam hal {sim_ctx}, perlu ada kajian lebih lanjut."
+                    else:
+                        fa_content = ""
+                    
+                    if fa_type in ("CREATE_POST", "CREATE_COMMENT"):
+                        args = {"content": fa_content}
+                    else:
+                        args = {}
+                    
+                    forced_action = ManualAction(
+                        action_type=ActionType.__members__.get(fa_type, ActionType.CREATE_POST),
+                        action_args=args
+                    )
+                    await result.env.step({fa_agent: forced_action})
+                    
+                    if action_logger:
+                        action_logger.log_action(
+                            round_num=round_num + 1,
+                            agent_id=fa_id,
+                            agent_name=fa_name,
+                            action_type=fa_type,
+                            action_args=args
+                        )
+                        total_actions += 1
+                        round_action_count += 1
+                except Exception:
+                    pass
+
         if action_logger:
             action_logger.log_round_end(round_num + 1, round_action_count)
         

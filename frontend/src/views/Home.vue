@@ -1,5 +1,20 @@
 <template>
   <div class="home-container">
+    <!-- Welcome Overlay -->
+    <Transition name="welcome-fade">
+      <div v-if="showWelcome" class="welcome-overlay" @click="startWelcomeClick">
+        <div class="welcome-center">
+          <img :src="logoImg" alt="KINJENG" class="welcome-logo" :class="{ 'logo-flying': isLogoFlying, 'logo-expand': isLogoExpanding }" @click.stop="handleLogoClick" />
+          <h1 class="welcome-title">KINJENG<span class="welcome-accent">_PROJECT</span></h1>
+          <p class="welcome-subtitle">Multi-Agent Social Simulation Platform</p>
+          <button class="welcome-btn" @click.stop="startWelcomeClick">
+            🚀 Mulai
+          </button>
+          <p class="welcome-hint">Klik logo atau tombol Mulai untuk memulai</p>
+        </div>
+      </div>
+    </Transition>
+
     <NavBar />
 
     <div class="main-content">
@@ -24,98 +39,19 @@
               Pilih jenis simulasi yang sesuai dengan kebutuhan riset Anda.
             </p>
 
-            <!-- Type Cards (inline) -->
-            <div class="type-grid-mini">
-              <div
-                v-for="t in types" :key="t.id"
-                class="type-card-mini"
-                :class="{ selected: selectedType === t.id }"
-                @click="selectType(t.id)"
-              >
-                <div class="card-icon-mini">{{ t.icon }}</div>
-                <div class="card-body-mini">
-                  <div class="card-title-mini">{{ t.title }}</div>
-                  <div class="card-desc-mini">{{ t.desc }}</div>
-                </div>
-                <div v-if="selectedType === t.id" class="card-check-mini">✓</div>
-              </div>
+            <div v-if="!simulationType" class="type-select-inline">
+              <p class="step-desc">
+                Pilih tipe simulasi dan atur parameter, atau upload dokumen untuk simulasi kustom.
+              </p>
+              <button class="step-btn" @click="goToChooseSimulation">
+                🎯 Pilih Jenis Simulasi <span class="btn-arrow">→</span>
+              </button>
             </div>
-
-            <!-- Params Panel (shown when type selected) -->
-            <div v-if="selectedType" class="params-panel-mini">
-              <div class="params-row">
-                <div class="param-item-mini">
-                  <label>Jumlah Agen</label>
-                  <select v-model="params.agentCount" class="param-select-mini">
-                    <option :value="100">100</option>
-                    <option :value="500">500</option>
-                    <option :value="1000">1,000</option>
-                    <option :value="5000">5,000</option>
-                    <option :value="10000">10,000</option>
-                  </select>
-                </div>
-                <div class="param-item-mini">
-                  <label>Ronde</label>
-                  <select v-model="params.maxRounds" class="param-select-mini">
-                    <option :value="5">5</option>
-                    <option :value="10">10</option>
-                    <option :value="20">20</option>
-                    <option :value="50">50</option>
-                  </select>
-                </div>
-                <div class="param-item-mini">
-                  <label>Platform</label>
-                  <select v-model="params.platform" class="param-select-mini">
-                    <option value="twitter">Twitter</option>
-                    <option value="reddit">Reddit</option>
-                    <option value="both">Keduanya</option>
-                  </select>
-                </div>
-                <div v-if="selectedType === 'academic'" class="param-item-mini">
-                  <label>Skala Likert</label>
-                  <select v-model="params.likertScale" class="param-select-mini">
-                    <option :value="5">1-5</option>
-                    <option :value="7">1-7</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="stats-row">
-                <span>{{ params.agentCount.toLocaleString() }} agen</span>
-                <span class="stat-dot">·</span>
-                <span>{{ params.maxRounds }} ronde</span>
-                <span class="stat-dot">·</span>
-                <span>{{ (params.agentCount * params.maxRounds).toLocaleString() }} respon</span>
-                <span class="stat-dot">·</span>
-                <span>{{ params.platform === 'both' ? '2 platform' : '1 platform' }}</span>
-              </div>
-
-              <!-- Scenario builder for Kustom -->
-              <div v-if="selectedType === 'custom'" class="scenario-section">
-                <div class="scenario-fields">
-                  <div class="scenario-field">
-                    <label>Judul Skenario</label>
-                    <input v-model="customScenario.title" type="text" class="scenario-input" placeholder="Misal: Debat Pilkada 2029, Respons Masyarakat terhadap UU Ciptaker..." />
-                  </div>
-                  <div class="scenario-field">
-                    <label>Konteks / Latar Belakang</label>
-                    <textarea v-model="customScenario.context" class="scenario-textarea" rows="3" placeholder="Jelaskan situasi, isu, atau fenomena yang menjadi dasar simulasi ini..."></textarea>
-                  </div>
-                  <div class="scenario-field">
-                    <label>Aturan & Perilaku Agen</label>
-                    <textarea v-model="customScenario.agentRules" class="scenario-textarea" rows="3" placeholder="Bagaimana agen harus bersikap? Misal: agen terbagi dalam 2 kubu pro-kontra, agen netral, agen berdasarkan demografi tertentu..."></textarea>
-                  </div>
-                </div>
-              </div>
-
-              <div class="params-actions-mini">
-                <button class="btn-confirm-type" @click="confirmTypeSelection">
-                  {{ simulationType ? '✓ Ganti ke ' + typeLabels[selectedType] : '✓ Pilih ' + typeLabels[selectedType] }}
-                </button>
-              </div>
+            <div v-else class="type-selected-inline">
+              <span class="step-done">✓ {{ typeLabels[simulationType] || simulationType }}</span>
+              <span class="step-summary">{{ params.agentCount.toLocaleString() }} agen · {{ params.maxRounds }} ronde · {{ params.platform === 'both' ? '2 platform' : params.platform }}</span>
+              <button class="step-btn-small" @click="goToChooseSimulation">Ganti</button>
             </div>
-
-            <span v-if="simulationType" class="step-done">✓ {{ typeLabels[simulationType] || simulationType }}</span>
           </div>
         </div>
 
@@ -124,8 +60,7 @@
           <div class="step-body">
             <h3 class="step-title">Upload Dokumen</h3>
             <p class="step-desc">
-              Unggah dokumen pendukung seperti PDF, Markdown, atau file teks
-              yang berisi data atau referensi untuk simulasi.
+              Unggah dokumen pendukung sesuai jenis simulasi yang dipilih.
             </p>
             <div class="step-files">
               <div
@@ -143,7 +78,7 @@
                 </span>
               </div>
             </div>
-            <div class="step-hint">Format: PDF, MD, TXT</div>
+            <div class="step-hint">{{ uploadHintText }}</div>
           </div>
         </div>
 
@@ -158,7 +93,7 @@
             <textarea
               v-model="formData.simulationRequirement"
               class="step-textarea"
-              :placeholder="'Contoh: Saya ingin mensimulasikan opini publik tentang kebijakan pendidikan terbaru di Indonesia...'"
+              :placeholder="descPlaceholderText"
               rows="3"
             ></textarea>
           </div>
@@ -247,7 +182,6 @@ const files = ref([])
 const loading = ref(false)
 const fileInput = ref(null)
 const simulationType = ref(pendingStore.simulationType)
-const selectedType = ref(pendingStore.simulationType || null)
 const customScenario = reactive({ ...pendingStore.customScenario })
 
 const params = reactive({
@@ -256,14 +190,6 @@ const params = reactive({
   platform: 'both',
   likertScale: 5
 })
-
-const types = [
-  { id: 'academic', icon: '🎓', title: 'Akademik', desc: 'Kuesioner Likert, pilihan ganda, esai. Hasil statistik deskriptif.', tags: ['Likert', 'Statistik'] },
-  { id: 'political', icon: '🗳️', title: 'Politik', desc: 'Opini publik, preferensi kandidat, isu terkini.', tags: ['Polling', 'Opini'] },
-  { id: 'market', icon: '📊', title: 'Riset Pasar', desc: 'Analisis konsumen, persepsi merek, NPS.', tags: ['Konsumen', 'Brand'] },
-  { id: 'social', icon: '🌐', title: 'Sosial', desc: 'Opini publik bebas, berita viral, dampak kebijakan.', tags: ['Opini', 'Sosial'] },
-  { id: 'custom', icon: '⚙️', title: 'Kustom', desc: 'Upload dokumen dan deskripsi kebutuhan, tentukan skenario.', tags: ['Bebas', 'Kustom'] }
-]
 
 const typeLabels = {
   academic: 'Akademik',
@@ -277,22 +203,65 @@ const canSubmit = computed(() =>
   simulationType.value && formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
 )
 
-function selectType(id) {
-  selectedType.value = id
+const uploadHintText = computed(() => {
+  const hints = {
+    academic: 'Upload paper penelitian, jurnal, skripsi, tesis, atau artikel ilmiah',
+    political: 'Upload berita, artikel opini, dokumen kebijakan, pidato, press release',
+    market: 'Upload proposal produk, business plan, laporan pasar, analisis kompetitor',
+    social: 'Upload campuran berita, data sosial, opini publik, artikel',
+    custom: 'Upload dokumen sesuai skenario yang Anda tulis di atas'
+  }
+  return hints[simulationType.value] || 'Format: PDF, MD, TXT'
+})
+
+const descPlaceholderText = computed(() => {
+  const placeholders = {
+    academic: 'Contoh: Saya ingin mensimulasikan opini publik akademik tentang kebijakan pendidikan terbaru di Indonesia berdasarkan paper yang saya upload...',
+    political: 'Contoh: Saya ingin mensimulasikan respons publik terhadap kebijakan baru berdasarkan berita yang saya upload...',
+    market: 'Contoh: Saya ingin menganalisis persepsi pasar terhadap produk baru berdasarkan proposal dan data yang saya upload...',
+    social: 'Contoh: Saya ingin mensimulasikan opini publik campuran tentang isu sosial terkini dari berbagai sumber...',
+    custom: 'Jelaskan skenario simulasi yang Anda inginkan secara detail...'
+  }
+  return placeholders[simulationType.value] || 'Jelaskan kebutuhan simulasi Anda...'
+})
+
+function goToChooseSimulation() {
+  router.push({ name: 'SimulationType' })
 }
 
-function confirmTypeSelection() {
-  if (!selectedType.value) return
-  simulationType.value = selectedType.value
-  setSimulationType(selectedType.value, { ...params })
-  if (selectedType.value === 'custom') {
-    setCustomScenario({ ...customScenario })
-  }
+// Welcome Screen
+import logoImg from '../assets/logo/KINJENG_Project_logo_compressed.jpeg'
+const showWelcome = ref(true)
+const isLogoFlying = ref(false)
+const isLogoExpanding = ref(false)
+const welcomeClickable = ref(true)
+
+function handleLogoClick() {
+  if (!welcomeClickable.value) return
+  isLogoFlying.value = true
+  welcomeClickable.value = false
+  setTimeout(() => {
+    isLogoFlying.value = false
+    welcomeClickable.value = true
+  }, 1200)
+}
+
+function startWelcomeClick() {
+  if (!welcomeClickable.value) return
+  welcomeClickable.value = false
+  isLogoExpanding.value = true
+  setTimeout(() => {
+    showWelcome.value = false
+    isLogoExpanding.value = false
+    welcomeClickable.value = true
+  }, 800)
 }
 
 watch(() => route.query, (query) => {
+  if (query.skipWelcome === 'true') {
+    showWelcome.value = false
+  }
   if (query.type) {
-    selectedType.value = query.type
     simulationType.value = query.type
     params.agentCount = Number(query.agentCount) || 500
     params.maxRounds = Number(query.maxRounds) || 10
@@ -577,34 +546,69 @@ const startSimulation = async () => {
   color: var(--warning);
 }
 
-/* Inline Type Selection */
-.type-grid-mini { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
-.type-card-mini { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s; position: relative; }
-.type-card-mini:hover { border-color: var(--accent-primary); }
-.type-card-mini.selected { border-color: var(--black); background: var(--bg-selected); }
-.card-icon-mini { font-size: 1.3rem; width: 32px; text-align: center; flex-shrink: 0; }
-.card-body-mini { flex: 1; min-width: 0; }
-.card-title-mini { font-size: 0.85rem; font-weight: 600; }
-.card-desc-mini { font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; }
-.card-check-mini { position: absolute; top: 6px; right: 8px; font-size: 0.8rem; font-weight: 700; color: var(--success); }
-
-.params-panel-mini { margin-top: 12px; padding: 14px; border: 1px solid var(--border-color); background: var(--bg-secondary); }
-.params-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
-.param-item-mini { display: flex; flex-direction: column; gap: 3px; min-width: 110px; flex: 1; }
-.param-item-mini label { font-size: 0.68rem; font-weight: 600; color: var(--text-secondary); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
-.param-select-mini { padding: 6px 8px; border: 1px solid var(--border-color); background: var(--bg-primary); font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-primary); }
-.param-select-mini:focus { outline: none; border-color: var(--accent-primary); }
-
-.stats-row { font-size: 0.72rem; color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 10px; }
-.stat-dot { margin: 0 4px; }
-
-.params-actions-mini { display: flex; gap: 8px; }
-.btn-confirm-type { width: 100%; padding: 10px; border: none; background: var(--black); color: var(--white); font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-.btn-confirm-type:hover { background: var(--accent-primary); }
-
-/* Feature Section */
-.feature-section {
-  margin-bottom: 40px;
+/* Inline Type Select (simplified) */
+.type-select-inline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+.type-select-inline .step-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--black);
+  color: var(--white);
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.type-select-inline .step-btn:hover {
+  background: var(--accent-primary);
+}
+.type-select-inline .step-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+}
+.type-selected-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+.type-selected-inline .step-done {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--success);
+  font-family: var(--font-mono);
+}
+.type-selected-inline .step-summary {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+.step-btn-small {
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.step-btn-small:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
 }
 
 .section-title {
@@ -674,67 +678,114 @@ const startSimulation = async () => {
   color: var(--text-secondary);
 }
 
-/* Scenario Builder (Kustom) */
-.scenario-section {
-  margin-top: 12px;
-  padding: 14px;
-  border: 1px dashed var(--accent-primary);
-  background: var(--bg-primary);
+/* Welcome Overlay */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg-primary, #000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
-.scenario-section::before {
-  content: '✎ Skenario Kustom';
-  display: block;
-  font-size: 0.7rem;
+.welcome-center {
+  text-align: center;
+  animation: welcomeFadeIn 1s ease-out;
+}
+@keyframes welcomeFadeIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.welcome-logo {
+  width: 160px;
+  height: auto;
+  margin-bottom: 24px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border-radius: 12px;
+  animation: logoFloat 4s ease-in-out infinite;
+}
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-12px) rotate(-2deg); }
+  50% { transform: translateY(-6px) rotate(1deg); }
+  75% { transform: translateY(-18px) rotate(-1deg); }
+}
+.welcome-logo.logo-flying {
+  animation: logoFlyOut 1.2s ease-in-out forwards;
+}
+@keyframes logoFlyOut {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  30% { transform: translate(100px, -150px) scale(1.3) rotate(15deg); }
+  60% { transform: translate(-80px, 100px) scale(0.8) rotate(-20deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+}
+.welcome-logo.logo-expand {
+  animation: logoExpand 0.8s ease-in-out forwards;
+}
+@keyframes logoExpand {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(50); opacity: 0.3; }
+}
+.welcome-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  margin: 0 0 8px;
+  letter-spacing: 2px;
+}
+.welcome-accent {
+  color: var(--accent-primary, #FF4500);
+}
+.welcome-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #888);
+  margin: 0 0 32px;
+  font-family: var(--font-mono);
+}
+.welcome-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 36px;
+  background: var(--accent-primary, #FF4500);
+  color: #fff;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 1rem;
   font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  letter-spacing: 1px;
+}
+.welcome-btn:hover {
+  background: var(--black, #000);
+  transform: translateY(-2px);
+}
+.welcome-hint {
+  font-size: 0.7rem;
+  color: var(--text-tertiary, #555);
+  margin-top: 20px;
   font-family: var(--font-mono);
-  color: var(--accent-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 10px;
 }
-.scenario-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.welcome-fade-enter-active,
+.welcome-fade-leave-active {
+  transition: opacity 0.5s ease;
 }
-.scenario-field {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.welcome-fade-enter-from,
+.welcome-fade-leave-to {
+  opacity: 0;
 }
-.scenario-field label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+@media (min-width: 1200px) {
+  .welcome-logo { width: 220px; }
+  .welcome-title { font-size: 3rem; }
 }
-.scenario-input {
-  padding: 8px 10px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--text-primary);
-  outline: none;
-}
-.scenario-input:focus {
-  border-color: var(--accent-primary);
-}
-.scenario-textarea {
-  padding: 8px 10px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--text-primary);
-  resize: vertical;
-  outline: none;
-  line-height: 1.5;
-}
-.scenario-textarea:focus {
-  border-color: var(--accent-primary);
+@media (max-width: 480px) {
+  .welcome-logo { width: 120px; }
+  .welcome-title { font-size: 1.6rem; }
+  .welcome-subtitle { font-size: 0.75rem; }
+  .welcome-btn { padding: 12px 24px; font-size: 0.85rem; }
 }
 
 @media (max-width: 700px) {

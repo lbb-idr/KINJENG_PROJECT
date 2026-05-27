@@ -377,6 +377,13 @@ watch(isSimulating, (newValue) => {
   }
 }, { immediate: true })
 
+// Auto-load graph when project graph_id becomes available
+watch(() => projectData.value?.graph_id, (newId) => {
+  if (newId && !graphData.value) {
+    loadGraph(newId)
+  }
+})
+
 let restoring = false
 
 onMounted(() => {
@@ -395,8 +402,8 @@ onMounted(() => {
   }
 
   // Selalu load graph data (even saat session restore)
-  if (currentSimulationId.value) {
-    loadGraph(currentSimulationId.value)
+  if (projectData.value?.graph_id) {
+    loadGraph(projectData.value.graph_id)
   }
 
   // Peringatan refresh/navigasi

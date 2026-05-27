@@ -107,6 +107,25 @@
             </div>
           </div>
 
+          <!-- Scenario Builder for Kustom -->
+          <div v-if="selectedType === 'custom'" class="custom-scenario-panel">
+            <h4 class="scenario-title">✎ Skenario Kustom</h4>
+            <div class="scenario-fields">
+              <div class="scenario-field">
+                <label>Judul Skenario</label>
+                <input v-model="customScenario.title" type="text" class="scenario-input" placeholder="Misal: Debat Pilkada 2029, Respons Masyarakat terhadap UU Ciptaker..." />
+              </div>
+              <div class="scenario-field">
+                <label>Konteks / Latar Belakang</label>
+                <textarea v-model="customScenario.context" class="scenario-textarea" rows="3" placeholder="Jelaskan situasi, isu, atau fenomena yang menjadi dasar simulasi ini..."></textarea>
+              </div>
+              <div class="scenario-field">
+                <label>Aturan & Perilaku Agen</label>
+                <textarea v-model="customScenario.agentRules" class="scenario-textarea" rows="3" placeholder="Bagaimana agen harus bersikap? Misal: agen terbagi dalam 2 kubu pro-kontra, agen netral, agen berdasarkan demografi tertentu..."></textarea>
+              </div>
+            </div>
+          </div>
+
           <div class="params-actions">
             <button class="btn-back" @click="$router.push('/')">
               ← {{ $t('simType.back') }}
@@ -135,6 +154,11 @@ const params = reactive({
   maxRounds: 10,
   platform: 'both',
   likertScale: 5
+})
+const customScenario = reactive({
+  title: '',
+  context: '',
+  agentRules: ''
 })
 
 const stats = computed(() => {
@@ -207,10 +231,13 @@ const types = [
 ]
 
 function confirmType() {
-  router.push({
-    name: 'Home',
-    query: { type: selectedType.value, ...params }
-  })
+  const query = { type: selectedType.value, ...params }
+  if (selectedType.value === 'custom') {
+    query.scenarioTitle = customScenario.title
+    query.scenarioContext = customScenario.context
+    query.scenarioRules = customScenario.agentRules
+  }
+  router.push({ name: 'Home', query })
 }
 </script>
 
@@ -474,6 +501,67 @@ function confirmType() {
 
 .mode-item {
   flex: 1.3;
+}
+
+/* Custom Scenario Panel */
+.custom-scenario-panel {
+  margin: 16px 0;
+  padding: 20px;
+  border: 1px dashed var(--accent-primary, #FF4500);
+  background: var(--bg-secondary, #F9F9F9);
+}
+.scenario-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent-primary, #FF4500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 12px 0;
+}
+.scenario-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.scenario-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.scenario-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.scenario-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, #DDD);
+  background: var(--bg-primary, #FFF);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-primary, #000);
+  outline: none;
+}
+.scenario-input:focus {
+  border-color: var(--accent-primary, #FF4500);
+}
+.scenario-textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, #DDD);
+  background: var(--bg-primary, #FFF);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-primary, #000);
+  resize: vertical;
+  outline: none;
+  line-height: 1.5;
+}
+.scenario-textarea:focus {
+  border-color: var(--accent-primary, #FF4500);
 }
 
 .mode-select-sm {

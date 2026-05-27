@@ -230,51 +230,65 @@ const toggleMaximize = (target) => {
 
 // --- Data Logic ---
 const loadReportData = async () => {
-  try {
-    addLog(t('log.loadReportData', { id: currentReportId.value }))
+  addLog(t('log.loadReportData', { id: currentReportId.value }))
 
-    // 获取 report 信息以获取 simulation_id
-    const reportRes = await getReport(currentReportId.value)
-    if (reportRes.success && reportRes.data) {
-      const reportData = reportRes.data
-      simulationId.value = reportData.simulation_id
-      showRetry.value = false
+  // Polling: report mungkin belum siap (background thread masih jalan)
+  const maxRetries = 20
+  const pollInterval = 2000
 
-      if (simulationId.value) {
-        // 获取 simulation 信息
-        const simRes = await getSimulation(simulationId.value)
-        if (simRes.success && simRes.data) {
-          const simData = simRes.data
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const reportRes = await getReport(currentReportId.value)
+      if (reportRes.success && reportRes.data) {
+        const reportData = reportRes.data
+        if (reportData.status === 'pending') {
+          addLog(`Report masih diproses... (${attempt}/${maxRetries})`)
+          await new Promise(r => setTimeout(r, pollInterval))
+          continue
+        }
+        simulationId.value = reportData.simulation_id
+        showRetry.value = false
 
-          // 获取 project 信息
-          if (simData.project_id) {
-            const projRes = await getProject(simData.project_id)
-            if (projRes.success && projRes.data) {
-              projectData.value = projRes.data
-              addLog(t('log.projectLoadSuccess', { id: projRes.data.project_id }))
-
-              // 获取 graph 数据
-              if (projRes.data.graph_id) {
-                await loadGraph(projRes.data.graph_id)
+        if (simulationId.value) {
+          const simRes = await getSimulation(simulationId.value)
+          if (simRes.success && simRes.data) {
+            const simData = simRes.data
+            if (simData.project_id) {
+              const projRes = await getProject(simData.project_id)
+              if (projRes.success && projRes.data) {
+                projectData.value = projRes.data
+                addLog(t('log.projectLoadSuccess', { id: projRes.data.project_id }))
+                if (projRes.data.graph_id) {
+                  await loadGraph(projRes.data.graph_id)
+                }
               }
             }
           }
         }
+        return
       }
-    } else {
-      addLog(t('log.getReportInfoFailed', { error: reportRes.error || t('common.unknownError') }))
-      // Report gagal dimuat — tampilkan tombol retry klo ada simulation_id
-      if (simulationId.value) {
-        showRetry.value = true
-        currentStatus.value = 'error'
+      // Report belum siap (404) — retry
+      if (attempt < maxRetries) {
+        addLog(`Report belum siap, menunggu... (${attempt}/${maxRetries})`)
+        await new Promise(r => setTimeout(r, pollInterval))
+      } else {
+        addLog(t('log.getReportInfoFailed', { error: reportRes.error || 'Max retries exceeded' }))
+        if (simulationId.value) {
+          showRetry.value = true
+          currentStatus.value = 'error'
+        }
       }
-    }
-  } catch (err) {
-    addLog(t('log.loadException', { error: err.message }))
-    // Ada exception — retry juga dimungkinkan klo simulation_id ada
-    if (simulationId.value) {
-      showRetry.value = true
-      currentStatus.value = 'error'
+    } catch (err) {
+      if (attempt < maxRetries) {
+        addLog(`Report belum siap, menunggu... (${attempt}/${maxRetries})`)
+        await new Promise(r => setTimeout(r, pollInterval))
+      } else {
+        addLog(t('log.loadException', { error: err.message }))
+        if (simulationId.value) {
+          showRetry.value = true
+          currentStatus.value = 'error'
+        }
+      }
     }
   }
 }

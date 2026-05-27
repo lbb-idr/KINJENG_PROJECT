@@ -154,6 +154,7 @@ def generate_ontology():
         simulation_requirement = request.form.get('simulation_requirement', '')
         project_name = request.form.get('project_name', 'Unnamed Project')
         additional_context = request.form.get('additional_context', '')
+        simulation_type = request.form.get('simulation_type', 'custom')
         
         logger.debug(f"项目名称: {project_name}")
         logger.debug(f"模拟需求: {simulation_requirement[:100]}...")
@@ -218,8 +219,10 @@ def generate_ontology():
         ontology = generator.generate(
             document_texts=document_texts,
             simulation_requirement=simulation_requirement,
-            additional_context=additional_context if additional_context else None
+            additional_context=additional_context if additional_context else None,
+            simulation_type=simulation_type
         )
+        project.simulation_type = simulation_type
         
         # 保存本体到项目
         entity_count = len(ontology.get("entity_types", []))

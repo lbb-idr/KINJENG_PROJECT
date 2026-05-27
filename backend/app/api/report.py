@@ -312,6 +312,17 @@ def get_report(report_id: str):
         report = ReportManager.get_report(report_id)
         
         if not report:
+            # Cek apakah folder report sudah ada (background thread masih berjalan)
+            folder = ReportManager._get_report_folder(report_id)
+            if os.path.exists(folder) and not os.path.exists(ReportManager._get_report_path(report_id)):
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "report_id": report_id,
+                        "status": "pending",
+                        "message": "Report is being generated"
+                    }
+                }), 200
             return jsonify({
                 "success": False,
                 "error": t('api.reportNotFound', id=report_id)
