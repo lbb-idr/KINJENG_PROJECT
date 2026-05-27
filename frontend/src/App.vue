@@ -6,7 +6,7 @@
 import { onMounted, onUnmounted } from 'vue'
 import { useTheme } from './composables/useTheme'
 
-const API = 'http://localhost:5001/api'
+const API = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL + '/api' : (import.meta.env.PROD ? '/api' : 'http://localhost:5001/api')
 const { theme } = useTheme()
 
 onMounted(() => {

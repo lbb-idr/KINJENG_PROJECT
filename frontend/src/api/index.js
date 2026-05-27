@@ -2,8 +2,11 @@ import axios from 'axios'
 import i18n from '../i18n'
 
 // 创建axios实例
+// Dev: Vite dev server proxy at localhost:5001 handles /api/*
+// Prod: relative URL (same origin) since Flask serves frontend + backend
+const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost:5001')
 const service = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001',
+  baseURL: apiBase,
   timeout: 300000, // 5分钟超时（本体生成可能需要较长时间）
   headers: {
     'Content-Type': 'application/json'
