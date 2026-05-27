@@ -8,6 +8,20 @@ KINJENG_PROJECT adalah platform simulasi sosial berbasis AI. Pengguna dapat meng
 
 Alur kerjanya: **unggah data → AI menciptakan masyarakat digital → agen berinteraksi → hasil siap dianalisis.**
 
+## Filosofi
+
+**Kinjeng** (capung dalam bahasa Jawa, termasuk dialek Indramayu) memiliki empat sifat yang menjadi fondasi proyek ini:
+
+1. **Mata Majemuk** — Capung dapat melihat hampir 360° dengan presisi tinggi. Seperti itulah AI dalam platform ini: mampu mengamati dan memetakan dinamika sosial dari berbagai sudut pandang secara simultan, mengatasi keterbatasan survei manual yang sempit.
+
+2. **Terbang Cepat & Lincah** — Capung adalah penerbang ulung: maju, mundur, melayang, bermanuver instan. Simulasi multi-agen bekerja dengan kecepatan yang sama — memangkas proses riset yang biasanya berminggu-minggu menjadi hitungan menit.
+
+3. **Indikator Lingkungan** — Capung hanya hidup di ekosistem yang bersih dan seimbang. Platform ini menjadi alat untuk menguji "kesehatan" opini publik terhadap suatu isu atau kebijakan sebelum kebijakan tersebut diterapkan di dunia nyata.
+
+4. **Metamorfosis** — Capung bertransformasi dari nimfa air menjadi serangga bersayap. Ini melambangkan transformasi metodologi riset: dari survei konvensional menuju simulasi berbasis kecerdasan buatan.
+
+> *Menggunakan kearifan lokal nama "Kinjeng" untuk teknologi Multi-Agent Simulation menunjukkan bahwa inovasi global tetap bisa lahir dan membumi dari filosofi alam di sekitar kita.*
+
 ## Fitur
 
 - **Simulasi Multi-Agent** — Ciptakan agen AI dengan kepribadian beragam; mereka akan berkomunikasi dan berdebat secara otomatis
