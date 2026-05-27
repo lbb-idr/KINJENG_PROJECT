@@ -236,7 +236,7 @@ import SurveyQuestionEditor from '../components/SurveyQuestionEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
-const API = 'http://localhost:5001/api'
+const API = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL + '/api' : (import.meta.env.PROD ? '/api' : 'http://localhost:5001/api')
 
 const selectedProject = ref('')
 const projects = ref([])

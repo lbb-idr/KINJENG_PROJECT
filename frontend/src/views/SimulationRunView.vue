@@ -79,7 +79,7 @@ import { getSimulation, getSimulationConfig, stopSimulation, closeSimulationEnv,
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import { useI18n } from 'vue-i18n'
 
-const API = 'http://localhost:5001/api'
+const API = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL + '/api' : (import.meta.env.PROD ? '/api' : 'http://localhost:5001/api')
 const STORAGE_KEY = 'mirofish_sim_run'
 
 const { t } = useI18n()

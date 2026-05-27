@@ -222,7 +222,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import axios from 'axios'
 import NavBar from '../components/NavBar.vue'
 
-const API = 'http://localhost:5001/api'
+const API = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL + '/api' : (import.meta.env.PROD ? '/api' : 'http://localhost:5001/api')
 
 const question = ref('Seberapa setuju Anda bahwa perubahan iklim adalah ancaman serius yang memerlukan tindakan segera?')
 const mode = ref('auto')
