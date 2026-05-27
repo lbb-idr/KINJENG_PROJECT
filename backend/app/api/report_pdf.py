@@ -10,6 +10,8 @@ from . import survey_bp
 from ..services import pdf_renderer
 from ..services.survey_generator import SurveyResultStore
 from ..services.survey_statistics import SurveyStatistics
+from ..services.report_agent import ReportManager
+from ..models.project import ProjectManager
 from ..utils.logger import get_logger
 
 logger = get_logger('mirofish.api.report_pdf')
@@ -33,6 +35,23 @@ def generate_survey_report(project_id: str):
         if results is None:
             return jsonify({"success": False, "error": "No survey results found"}), 404
 
+        # Auto-lookup prediction report from project simulation
+        prediction_report = None
+        try:
+            project = ProjectManager.get_project(project_id)
+            if project and project.simulation_id:
+                report = ReportManager.get_report_by_simulation(project.simulation_id)
+                if report and report.outline:
+                    outline_dict = report.outline.to_dict()
+                    prediction_report = {
+                        "title": outline_dict.get("title", "Laporan Prediksi Simulasi"),
+                        "summary": outline_dict.get("summary", ""),
+                        "sections": outline_dict.get("sections", []),
+                        "full_content": report.markdown_content or ""
+                    }
+        except Exception as e:
+            logger.warning(f"Prediction report lookup skipped: {e}")
+
         statistics = SurveyStatistics.compute_all(results)
 
         filepath = pdf_renderer.generate_pdf(
@@ -40,7 +59,8 @@ def generate_survey_report(project_id: str):
             results=results,
             statistics=statistics,
             survey_config=survey_config,
-            report_data=report_data
+            report_data=report_data,
+            prediction_report=prediction_report
         )
 
         return jsonify({

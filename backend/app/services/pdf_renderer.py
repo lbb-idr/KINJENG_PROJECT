@@ -10,6 +10,12 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from jinja2 import Environment, FileSystemLoader
 
+try:
+    import markdown as md_lib
+    MD_AVAILABLE = True
+except ImportError:
+    MD_AVAILABLE = False
+
 from ..config import Config
 from ..utils.logger import get_logger
 
@@ -161,12 +167,43 @@ def _generate_conclusion(statistics: Dict[str, Any], total_resp: int, total_q: i
     return " ".join(lines)
 
 
+def _markdown_to_html(md_text: str) -> str:
+    """Convert markdown text to safe HTML for PDF embedding."""
+    if not md_text or not md_text.strip():
+        return ""
+    if MD_AVAILABLE:
+        return md_lib.markdown(
+            md_text,
+            extensions=['extra', 'sane_lists']
+        )
+    return md_text.replace('\n', '<br>')
+
+
+def _process_prediction_report(report: Optional[Dict]) -> Optional[Dict]:
+    """Convert prediction report sections' markdown content to HTML."""
+    if not report:
+        return None
+    processed = dict(report)
+    sections = []
+    for sec in report.get('sections', []):
+        sections.append({
+            "title": sec.get('title', ''),
+            "description": sec.get('description', ''),
+            "content_html": _markdown_to_html(sec.get('content', sec.get('description', ''))),
+            "order": sec.get('order', 0)
+        })
+    processed['sections'] = sections
+    processed['full_content_html'] = _markdown_to_html(report.get('full_content', ''))
+    return processed
+
+
 def generate_pdf(
     project_id: str,
     results: Dict[str, Any],
     statistics: Dict[str, Any],
     survey_config: Optional[Dict] = None,
-    report_data: Optional[Dict] = None
+    report_data: Optional[Dict] = None,
+    prediction_report: Optional[Dict] = None
 ) -> str:
     """
     Generate a PDF report from survey data using Jinja2 + WeasyPrint.
@@ -208,6 +245,9 @@ def generate_pdf(
     type_map = {'academic': 'Akademik', 'political': 'Politik', 'market': 'Pasar', 'social': 'Sosial', 'custom': 'Kustom'}
     sim_type_label = type_map.get(sim_type, sim_type)
 
+    # ─── Process prediction report ───
+    pred_report_processed = _process_prediction_report(prediction_report)
+
     # ─── Render Jinja2 template ───
     template_dir = os.path.join(os.path.dirname(__file__), '..', 'templates')
     env = Environment(loader=FileSystemLoader(template_dir))
@@ -232,6 +272,7 @@ def generate_pdf(
         conclusion=conclusion,
         generated_date=datetime.now().strftime('%d %B %Y %H:%M'),
         report_data=report_data,
+        prediction_report=pred_report_processed,
     )
 
     # ─── Convert to PDF ───
