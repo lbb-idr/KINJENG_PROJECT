@@ -7,7 +7,7 @@ import traceback
 from flask import request, jsonify, send_file
 
 from . import survey_bp
-from ..services.report_generator_pdf import PDFReportGenerator
+from ..services import pdf_renderer
 from ..services.survey_generator import SurveyResultStore
 from ..services.survey_statistics import SurveyStatistics
 from ..utils.logger import get_logger
@@ -35,7 +35,7 @@ def generate_survey_report(project_id: str):
 
         statistics = SurveyStatistics.compute_all(results)
 
-        filepath = PDFReportGenerator.generate(
+        filepath = pdf_renderer.generate_pdf(
             project_id=project_id,
             results=results,
             statistics=statistics,
@@ -61,7 +61,7 @@ def generate_survey_report(project_id: str):
 def download_survey_report(project_id: str):
     """Download a generated PDF report."""
     try:
-        path = PDFReportGenerator.get_report_path(project_id)
+        path = pdf_renderer.get_report_path(project_id)
         if path is None:
             return jsonify({"success": False, "error": "Report not found. Generate it first."}), 404
 
@@ -81,7 +81,7 @@ def download_survey_report(project_id: str):
 def delete_survey_report(project_id: str):
     """Delete a generated PDF report."""
     try:
-        ok = PDFReportGenerator.delete_report(project_id)
+        ok = pdf_renderer.delete_report(project_id)
         if not ok:
             return jsonify({"success": False, "error": "Report not found"}), 404
         return jsonify({"success": True, "message": f"Report deleted: {project_id}"})

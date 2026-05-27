@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Laporan Survei Akademik - {{ survey_title }}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Plus Jakarta Sans', 'DejaVu Sans', sans-serif;
+  background: #f3f4f6;
+  color: #1e293b;
+}
+
+.page {
+  width: 210mm;
+  height: 297mm;
+  background: #fff;
+  margin: 20px auto;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+}
+
+@media print {
+  body { background: #fff; }
+  .page { margin: 0; box-shadow: none; }
+}
+
+/* ===== COVER ===== */
+.cover {
+  padding: 4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 8px solid #1e293b;
+}
+.cover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #1e293b;
+  padding-bottom: 1rem;
+}
+.cover-header span {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: #334155;
+}
+.cover-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 2rem;
+}
+.cover-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.cover-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #1e293b;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.cover-divider {
+  width: 4rem;
+  height: 0.25rem;
+  background: #1e293b;
+  margin: 0 auto;
+}
+.cover-subtitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #475569;
+  max-width: 28rem;
+  line-height: 1.5;
+}
+.cover-footer {
+  border-top: 2px solid #1e293b;
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.cover-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: #475569;
+}
+.cover-meta strong { color: #1e293b; }
+.cover-copy {
+  text-align: center;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  color: #94a3b8;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.5rem;
+}
+
+/* ===== CHAPTER ===== */
+.chapter {
+  padding: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.chapter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+}
+.chapter-header h2 {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: #1e293b;
+  text-transform: uppercase;
+}
+.chapter-num {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.1em;
+}
+.chapter-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.5rem;
+}
+.chapter-footer {
+  border-top: 2px solid #1e293b;
+  padding-top: 1rem;
+}
+.chapter-footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chapter-footer-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #64748b;
+}
+.chapter-footer-page {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.chapter-footer-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.6rem;
+  color: #94a3b8;
+  letter-spacing: 0.1em;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ===== CONTENT BLOCKS ===== */
+.content-grid {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 2rem;
+  align-items: start;
+}
+.content-main { display: flex; flex-direction: column; gap: 1.5rem; }
+.content-sidebar { display: flex; flex-direction: column; gap: 1rem; }
+
+.badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  display: inline-block;
+  color: #fff;
+}
+.badge-blue { background: #2563eb; }
+.badge-emerald { background: #059669; }
+.badge-amber { background: #d97706; }
+.badge-rose { background: #e11d48; }
+.badge-slate { background: #1e293b; }
+
+.content-item {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding-top: 0.5rem;
+}
+.content-num {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: #1e293b;
+  border-bottom: 2px solid #1e293b;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.content-text { font-size: 0.75rem; color: #475569; line-height: 1.6; }
+.content-text strong { color: #1e293b; display: block; margin-bottom: 0.15rem; }
+
+.sidebar-card {
+  border: 2px solid #1e293b;
+  padding: 1.25rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.sidebar-card-light {
+  border: 1px solid #e2e8f0;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sidebar-card-light h5 {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.sidebar-card-light p {
+  font-size: 0.65rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.strategy-box {
+  display: grid;
+  grid-template-columns: 4fr 8fr;
+  gap: 1rem;
+  align-items: center;
+}
+.strategy-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.strategy-name {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.strategy-desc {
+  border-left: 1px solid #cbd5e1;
+  padding-left: 1rem;
+}
+.strategy-desc p {
+  font-size: 0.65rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* ===== TABLES ===== */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  font-size: 0.65rem;
+}
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table-wrap th {
+  background: #1e293b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.6rem;
+  padding: 0.35rem 0.25rem;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+.table-wrap td {
+  padding: 0.3rem 0.25rem;
+  text-align: center;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.6rem;
+}
+.table-wrap tr:nth-child(even) td { background: #f8fafc; }
+.table-wrap td:first-child { font-weight: 600; }
+.table-wrap td:nth-child(2) { text-align: left; }
+.table-wrap .total-row td { font-weight: 700; background: #f1f5f9 !important; }
+
+.interpretation {
+  font-size: 0.7rem;
+  color: #475569;
+  line-height: 1.6;
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid #1e293b;
+}
+
+/* ===== CHARTS ===== */
+.chart-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.5rem auto;
+}
+
+/* ===== OPEN RESPONSES ===== */
+.open-response {
+  font-size: 0.7rem;
+  color: #475569;
+  line-height: 1.5;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.open-response-num {
+  font-weight: 700;
+  color: #1e293b;
+  margin-right: 0.3rem;
+}
+
+/* ===== SUMMARY BOX ===== */
+.summary-box {
+  border: 2px solid #1e293b;
+  padding: 1.25rem;
+  background: #f8fafc;
+}
+.summary-box h4 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+.summary-box p {
+  font-size: 0.7rem;
+  color: #475569;
+  line-height: 1.6;
+}
+
+/* ===== PAGE NUMBERING ===== */
+.page-number {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.5rem;
+  font-size: 0.6rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+
+<!-- ========== COVER ========== -->
+<div class="page cover">
+  <div class="cover-header">
+    <span>MIROFISH SURVEY</span>
+    <span>LINESA</span>
+  </div>
+  <div class="cover-body">
+    <div>
+      <p class="cover-label">Laporan Survei Akademik</p>
+      <h1 class="cover-title">{{ survey_title }}</h1>
+    </div>
+    <div class="cover-divider"></div>
+    <p class="cover-subtitle">{{ survey_description }}</p>
+  </div>
+  <div class="cover-footer">
+    <div class="cover-meta">
+      <div>
+        <strong>Tipe Survei:</strong> {{ sim_type_label }}
+      </div>
+      <div>
+        <strong>Total Responden:</strong> {{ total_respondents }}
+      </div>
+      <div>
+        <strong>Pertanyaan:</strong> {{ total_questions }}
+      </div>
+    </div>
+    <div class="cover-meta">
+      <div>
+        <strong>Skala Likert:</strong> {{ likert_scale }}-point
+      </div>
+      <div>
+        <strong>Tanggal:</strong> {{ generated_date }}
+      </div>
+    </div>
+    <p class="cover-copy">Dihasilkan oleh MiroFish Survey Engine</p>
+  </div>
+</div>
+
+<!-- ========== RINGKASAN LAPORAN SIMULASI ========== -->
+{% if report_data %}
+<div class="page chapter">
+  <div class="chapter-header">
+    <h2>Ringkasan Laporan Simulasi</h2>
+    <span class="chapter-num">BAB I</span>
+  </div>
+  <div class="chapter-body">
+    {% if report_data.title %}
+    <h3 style="font-size:1.1rem;font-weight:800;letter-spacing:0.05em;color:#1e293b;">{{ report_data.title }}</h3>
+    {% endif %}
+    {% if report_data.summary %}
+    <p style="font-size:0.75rem;color:#475569;line-height:1.6;">{{ report_data.summary }}</p>
+    {% endif %}
+    {% if report_data.sections %}
+    <div style="margin-top:0.5rem;">
+      {% for sec in report_data.sections %}
+      {% set sec_title = sec.title if sec is mapping else sec %}
+      <div class="content-item">
+        <span class="content-num" style="font-size:1.2rem;">{{ loop.index }}</span>
+        <p class="content-text"><strong>{{ sec_title }}</strong></p>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  <div class="chapter-footer">
+    <div class="chapter-footer-inner">
+      <span class="chapter-footer-label">LAPORAN SURVEI AKADEMIK</span>
+      <span class="chapter-footer-page">01</span>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ========== METODOLOGI ========== -->
+{% set page_num = namespace(value=2) %}
+{% if report_data %}{% set page_num.value = 3 %}{% endif %}
+<div class="page chapter">
+  <div class="chapter-header">
+    <h2>Metodologi Penelitian</h2>
+    <span class="chapter-num">BAB {% if report_data %}II{% else %}I{% endif %}</span>
+  </div>
+  <div class="chapter-body">
+    <div class="content-grid">
+      <div class="content-main">
+        <div>
+          <span class="badge badge-blue">Prinsip Esensial</span>
+          <h3 style="font-size:1.1rem;font-weight:800;letter-spacing:0.05em;color:#1e293b;margin-top:0.5rem;">
+            Pendekatan Kuantitatif dengan Instrumen Kuesioner Daring
+          </h3>
+        </div>
+        <div class="content-item">
+          <span class="content-num">01</span>
+          <p class="content-text">
+            <strong>Desain Survei</strong>
+            Survei ini menggunakan metode kuantitatif dengan instrumen kuesioner daring.
+            Data dikumpulkan dari {{ total_respondents }} responden yang dipilih secara acak dari populasi simulasi.
+            Instrumen terdiri dari {{ total_questions }} pertanyaan yang mencakup skala Likert, pilihan ganda, dan pertanyaan terbuka.
+          </p>
+        </div>
+        <div class="content-item">
+          <span class="content-num">02</span>
+          <p class="content-text">
+            <strong>Skala Pengukuran</strong>
+            Skala Likert {{ likert_scale }}-point digunakan untuk mengukur tingkat persetujuan responden
+            terhadap setiap pernyataan dalam kuesioner.
+          </p>
+        </div>
+      </div>
+      <div class="content-sidebar">
+        <div class="sidebar-card">
+          <div class="badge badge-slate">Uji Reliabilitas</div>
+          {% if alpha is not none %}
+          <h4 style="font-size:0.85rem;font-weight:700;color:#1e293b;">
+            Cronbach's Alpha: {{ "%.3f"|format(alpha) }}
+          </h4>
+          <p style="font-size:0.7rem;color:#475569;line-height:1.5;">
+            {% if alpha >= 0.7 %}
+            Konsistensi internal <strong>tinggi</strong> — instrumen reliabel.
+            {% elif alpha >= 0.5 %}
+            Konsistensi internal <strong>sedang</strong> — cukup reliabel.
+            {% else %}
+            Konsistensi internal <strong>rendah</strong> — perlu ditinjau ulang.
+            {% endif %}
+          </p>
+          {% else %}
+          <p style="font-size:0.7rem;color:#64748b;line-height:1.5;">
+            Tidak tersedia (min. 2 pertanyaan Likert diperlukan).
+          </p>
+          {% endif %}
+        </div>
+        <div class="sidebar-card-light">
+          <span style="font-size:0.55rem;font-weight:700;letter-spacing:0.1em;color:#94a3b8;text-transform:uppercase;">Skala Likert</span>
+          <p style="font-size:0.7rem;color:#475569;line-height:1.5;">
+            1 = Sangat Tidak Setuju &nbsp;·&nbsp; 2 = Tidak Setuju &nbsp;·&nbsp; 3 = Netral<br>
+            4 = Setuju &nbsp;·&nbsp; 5 = Sangat Setuju
+            {% if likert_scale == 7 %}
+            <br>6 = Sangat Setuju Sekali &nbsp;·&nbsp; 7 = Sangat Setuju Ekstrem
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="chapter-footer">
+    <div class="chapter-footer-inner">
+      <span class="chapter-footer-label">LAPORAN SURVEI AKADEMIK</span>
+      <span class="chapter-footer-page">{{ "%02d"|format(page_num.value) }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- ========== STATISTIK DESKRIPTIF ========== -->
+{% set page_num.value = page_num.value + 1 %}
+<div class="page chapter">
+  <div class="chapter-header">
+    <h2>Statistik Deskriptif</h2>
+    <span class="chapter-num">BAB {% if report_data %}III{% else %}II{% endif %}</span>
+  </div>
+  <div class="chapter-body">
+    <div class="content-main">
+      <div>
+        <span class="badge badge-emerald">Analisis Statistik</span>
+        <h3 style="font-size:0.9rem;font-weight:800;letter-spacing:0.05em;color:#1e293b;margin-top:0.5rem;margin-bottom:0.5rem;">
+          Ringkasan Numerik Seluruh Pertanyaan
+        </h3>
+      </div>
+      <p style="font-size:0.7rem;color:#475569;line-height:1.5;margin-bottom:0.5rem;">
+        Tabel berikut menyajikan statistik deskriptif dari setiap pertanyaan dalam survei.
+        <b>Mean</b> adalah rata-rata skor, <b>SD</b> mengukur variabilitas jawaban,
+        <b>Rel. Mean (%)</b> menyatakan rata-rata dalam persentase terhadap skala maksimum.
+      </p>
+      {% if descriptives %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:3%">No</th>
+              <th style="width:30%">Pertanyaan</th>
+              <th style="width:5%">N</th>
+              <th style="width:7%">Mean</th>
+              <th style="width:7%">SD</th>
+              <th style="width:5%">Min</th>
+              <th style="width:5%">Max</th>
+              <th style="width:7%">Median</th>
+              <th style="width:9%">Rel. Mean</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for qid, desc in descriptives.items() %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td style="text-align:left;">{{ desc.question_text }}</td>
+              <td>{{ desc.n }}</td>
+              <td>{{ "%.2f"|format(desc.mean) }}</td>
+              <td>{{ "%.2f"|format(desc.std_dev) }}</td>
+              <td>{{ desc.min }}</td>
+              <td>{{ desc.max }}</td>
+              <td>{{ desc.median }}</td>
+              <td>{{ desc.relative_mean }}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if summary %}
+      <div class="interpretation">
+        {{ summary.text }}
+      </div>
+      {% endif %}
+      {% else %}
+      <p style="font-size:0.75rem;color:#64748b;">Tidak ada data deskriptif yang tersedia.</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="chapter-footer">
+    <div class="chapter-footer-inner">
+      <span class="chapter-footer-label">LAPORAN SURVEI AKADEMIK</span>
+      <span class="chapter-footer-page">{{ "%02d"|format(page_num.value) }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- ========== DISTRIBUSI FREKUENSI ========== -->
+{% for qid, freq in frequencies.items() %}
+{% set page_num.value = page_num.value + 1 %}
+<div class="page chapter">
+  <div class="chapter-header">
+    <h2>Distribusi Frekuensi</h2>
+    <span class="chapter-num">BAB {% if report_data %}IV{% else %}III{% endif %}</span>
+  </div>
+  <div class="chapter-body">
+    <div>
+      <span class="badge badge-amber">Pertanyaan {{ loop.index }}</span>
+      <h3 style="font-size:0.85rem;font-weight:700;color:#1e293b;margin-top:0.5rem;">{{ freq.question_text }}</h3>
+    </div>
+
+    {% if freq.type == 'likert' %}
+    <div class="table-wrap" style="margin-top:0.5rem;">
+      <table>
+        <thead>
+          <tr><th>Skor</th><th>Frekuensi</th><th>Persentase (%)</th></tr>
+        </thead>
+        <tbody>
+          {% for score in range(1, likert_scale + 1) %}
+          {% set s = score|string %}
+          <tr>
+            <td>{{ score }}</td>
+            <td>{{ freq.distribution.get(s, {}).get('count', 0) }}</td>
+            <td>{{ freq.distribution.get(s, {}).get('percentage', 0) }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="total-row"><td>Total</td><td>{{ freq.total }}</td><td>100.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    {% if charts.get(qid) %}
+    <div style="text-align:center;margin-top:0.5rem;">
+      <img class="chart-img" src="data:image/png;base64,{{ charts[qid] }}" alt="Chart {{ qid }}"
+           style="max-height:160px;width:auto;">
+    </div>
+    {% endif %}
+
+    <div class="interpretation">
+      {% set max_score = {'val': '', 'pct': 0} %}
+      {% for s in range(1, likert_scale + 1) %}
+      {% set ss = s|string %}
+      {% set pct = freq.distribution.get(ss, {}).get('percentage', 0) %}
+      {% if pct > max_score.pct %}
+      {% set _ = max_score.update({'val': ss, 'pct': pct}) %}
+      {% endif %}
+      {% endfor %}
+      Mayoritas responden memilih skor {{ max_score.val }} ({{ max_score.pct }}%),
+      menunjukkan kecenderungan yang cukup jelas pada pertanyaan ini.
+    </div>
+
+    {% elif freq.type == 'mcq' %}
+    <div class="table-wrap" style="margin-top:0.5rem;">
+      <table>
+        <thead>
+          <tr><th>Pilihan</th><th>Frekuensi</th><th>Persentase (%)</th></tr>
+        </thead>
+        <tbody>
+          {% for opt, data in freq.distribution.items() %}
+          <tr>
+            <td style="text-align:left;">{{ opt[:60] }}</td>
+            <td>{{ data.count }}</td>
+            <td>{{ data.percentage }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="total-row"><td>Total</td><td>{{ freq.total }}</td><td>100.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="interpretation">
+      Opsi yang paling banyak dipilih adalah
+      {% set max_opt = {'key': '', 'count': 0, 'pct': 0} %}
+      {% for opt, data in freq.distribution.items() %}
+      {% if data.count > max_opt.count %}
+      {% set _ = max_opt.update({'key': opt, 'count': data.count, 'pct': data.percentage}) %}
+      {% endif %}
+      {% endfor %}
+      "{{ max_opt.key }}" ({{ max_opt.count }} responden, {{ max_opt.pct }}%).
+    </div>
+
+    {% elif freq.type == 'open' %}
+    <p style="font-size:0.7rem;color:#475569;line-height:1.5;margin-bottom:0.5rem;">
+      Berikut adalah seluruh jawaban terbuka yang diberikan oleh responden.
+    </p>
+    {% for resp in freq.get('responses', []) %}
+    <div class="open-response">
+      <span class="open-response-num">{{ loop.index }}.</span> {{ resp }}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+  <div class="chapter-footer">
+    <div class="chapter-footer-inner">
+      <span class="chapter-footer-label">LAPORAN SURVEI AKADEMIK</span>
+      <span class="chapter-footer-page">{{ "%02d"|format(page_num.value) }}</span>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- ========== TABULASI SILANG ========== -->
+{% if cross_tabs %}
+{% set page_num.value = page_num.value + 1 %}
+<div class="page chapter">
+  <div class="chapter-header">
+    <h2>Tabulasi Silang Demografi</h2>
+    <span class="chapter-num">BAB V</span>
+  </div>
+  <div class="chapter-body">
+    <div>
+      <span class="badge badge-rose">Analisis Kelompok</span>
+      <h3 style="font-size:0.9rem;font-weight:800;color:#1e293b;margin-top:0.5rem;margin-bottom:0.5rem;">
+        Perbandingan Skor Antar Kelompok Demografi
+      </h3>
+    </div>
+    <p style="font-size:0.7rem;color:#475569;line-height:1.5;margin-bottom:0.5rem;">
+      Tabel berikut membandingkan rata-rata skor jawaban antar kelompok demografi.
+      Tujuannya adalah untuk melihat apakah latar belakang responden memengaruhi cara mereka menjawab.
+    </p>
+    {% for ct in cross_tabs %}
+    {% set field_labels = {'age':'Usia', 'gender':'Gender', 'education':'Pendidikan', 'occupation':'Pekerjaan', 'personality':'Kepribadian'} %}
+    <h4 style="font-size:0.75rem;font-weight:700;color:#1e293b;margin-top:0.75rem;margin-bottom:0.3rem;">
+      Berdasarkan {{ field_labels.get(ct.field, ct.field) }}:
+    </h4>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Kelompok</th><th>N</th><th>Mean</th><th>Std Dev</th></tr>
+        </thead>
+        <tbody>
+          {% for g in ct.groups %}
+          <tr>
+            <td>{{ g.group }}</td>
+            <td>{{ g.n }}</td>
+            <td>{{ "%.2f"|format(g.mean) }}</td>
+            <td>{{ "%.2f"|format(g.get('std', 0)) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if ct.groups %}
+    {% set max_g = ct.groups | sort(attribute='mean') | last %}
+    {% set min_g = ct.groups | sort(attribute='mean') | first %}
+    {% set max_std = ct.groups | sort(attribute='std') | last %}
+    <div class="interpretation">
+      Kelompok "{{ max_g.group }}" memiliki rata-rata skor tertinggi ({{ "%.2f"|format(max_g.mean) }}),
+      sementara "{{ min_g.group }}" memiliki rata-rata terendah ({{ "%.2f"|format(min_g.mean) }}).
+      Kelompok "{{ max_std.group }}" memiliki variasi jawaban paling besar (SD = {{ "%.2f"|format(max_std.get('std',0)) }}).
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  <div class="chapter-footer">
+    <div class="chapter-footer-inner">
+      <span class="chapter-footer-label">LAPORAN SURVEI AKADEMIK</span>
+      <span class="chapter-footer-page">{{ "%02d"|format(page_num.value) }}</span>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ========== INTERPRETASI ========== -->
+{% set page_num.value = page_num.value + 1 %}
+{% if cross_tabs %}{% set interpretasi_bab = 'VI' %}{% elif frequencies %}{% set interpretasi_bab = 'V' %}{% elif descriptives %}{% set interpretasi_bab = 'IV' %}{% elif report_data %}{% set interpretasi_bab = 'III' %}{% else %}{% set interpretasi_bab = 'II' %}{% endif %}
+<div class="page chapter">
+  <div class="chapter-header">
+    <h2>Interpretasi</h2>
+    <span class="chapter-num">BAB {{ interpretasi_bab }}</span>
+  </div>
+  <div class="chapter-body">
+    <div>
+      <span class="badge badge-blue">Analisis Temuan</span>
+      <h3 style="font-size:0.9rem;font-weight:800;color:#1e293b;margin-top:0.5rem;margin-bottom:0.5rem;">
+        Penjelasan Hasil Survei dalam Konteks Riset
+      </h3>
+    </div>
+    <div class="summary-box">
+      <h4>Interpretasi Hasil</h4>
+      <p>{{ interpretation }}</p>
+    </div>
+  </div>
+  <div class="chapter-footer">
+    <div class="chapter-footer-inner">
+      <span class="chapter-footer-label">LAPORAN SURVEI AKADEMIK</span>
+      <span class="chapter-footer-page">{{ "%02d"|format(page_num.value) }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- ========== KESIMPULAN ========== -->
+{% set page_num.value = page_num.value + 1 %}
+<div class="page chapter">
+  <div class="chapter-header">
+    <h2>Kesimpulan</h2>
+    <span class="chapter-num">BAB {{ interpretasi_bab }}</span>
+  </div>
+  <div class="chapter-body">
+    <div>
+      <span class="badge badge-slate">Rangkuman Akhir</span>
+      <h3 style="font-size:0.9rem;font-weight:800;color:#1e293b;margin-top:0.5rem;margin-bottom:0.5rem;">
+        Simpulan dan Rekomendasi
+      </h3>
+    </div>
+    <div class="summary-box">
+      <h4>Kesimpulan</h4>
+      <p>{{ conclusion }}</p>
+    </div>
+    <div class="strategy-box" style="margin-top:1rem;">
+      <div>
+        <p class="strategy-label">Rekomendasi</p>
+      </div>
+      <div class="strategy-desc">
+        <p>
+          Kesimpulan ini diharapkan dapat menjadi acuan bagi pengambil keputusan dalam menentukan langkah
+          selanjutnya, baik untuk pengembangan instrumen maupun untuk tindakan lanjutan berdasarkan temuan survei.
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="chapter-footer">
+    <div class="chapter-footer-inner">
+      <span class="chapter-footer-label">LAPORAN SURVEI AKADEMIK</span>
+      <span class="chapter-footer-page">{{ "%02d"|format(page_num.value) }}</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
