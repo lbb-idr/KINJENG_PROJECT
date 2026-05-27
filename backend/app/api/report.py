@@ -234,6 +234,7 @@ def get_generate_status():
         
         task_id = data.get('task_id')
         simulation_id = data.get('simulation_id')
+        report_id = data.get('report_id')
         
         # 如果提供了simulation_id，先检查是否已有完成的报告
         if simulation_id:
@@ -250,6 +251,13 @@ def get_generate_status():
                         "already_completed": True
                     }
                 })
+        
+        # 如果只有 report_id 没有 task_id，通过 metadata 查找任务
+        if not task_id and report_id:
+            task_manager = TaskManager()
+            found = task_manager.find_task_by_metadata('report_id', report_id)
+            if found:
+                task_id = found.task_id
         
         if not task_id:
             return jsonify({

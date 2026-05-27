@@ -171,6 +171,14 @@ class TaskManager:
                 tasks = [t for t in tasks if t.task_type == task_type]
             return [t.to_dict() for t in sorted(tasks, key=lambda x: x.created_at, reverse=True)]
     
+    def find_task_by_metadata(self, key: str, value: str) -> Optional[Task]:
+        """通过 metadata 字段查找任务"""
+        with self._task_lock:
+            for task in self._tasks.values():
+                if task.metadata.get(key) == value:
+                    return task
+        return None
+    
     def cleanup_old_tasks(self, max_age_hours: int = 24):
         """清理旧任务"""
         from datetime import timedelta
