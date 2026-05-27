@@ -3,6 +3,7 @@ MiroFish Backend - Flask应用工厂
 """
 
 import os
+import time
 import warnings
 
 # 抑制 multiprocessing resource_tracker 的警告（来自第三方库如 transformers）
@@ -43,6 +44,12 @@ def create_app(config_class=Config):
     # 启用CORS
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     
+    # 初始化 DatabaseManager (SQLite)
+    from .utils.database import DatabaseManager
+    DatabaseManager().init_app(app)
+    if should_log_startup:
+        logger.info(f"数据库路径: {Config.SQLITE_PATH}")
+
     # 初始化 TaskManager 持久化存储
     from .models.task import TaskManager
     storage_dir = os.path.join(app.config.get('UPLOAD_FOLDER', os.path.join(app.root_path, '..', 'uploads')), 'tasks')
@@ -55,20 +62,43 @@ def create_app(config_class=Config):
     SimulationRunner.register_cleanup()
     if should_log_startup:
         logger.info("已注册模拟进程清理函数")
+
+    # Init Metrics
+    from .utils.monitoring import MetricsCollector
+    metrics = MetricsCollector()
+    metrics.init()
+
+    # Init Sentry
+    if Config.SENTRY_DSN:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        sentry_sdk.init(
+            dsn=Config.SENTRY_DSN,
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=0.1,
+        )
+        if should_log_startup:
+            logger.info("Sentry 已初始化")
     
     # Request log (keep touch for /health endpoint timestamp, no auto-shutdown)
     from .api.system import touch
 
     @app.before_request
-    def before_request():
+    def before_request_with_metrics():
         touch()
+        request.environ['_start_time'] = time.time()
         logger = get_logger('mirofish.request')
         logger.debug(f"请求: {request.method} {request.path}")
         if request.content_type and 'json' in request.content_type:
             logger.debug(f"请求体: {request.get_json(silent=True)}")
     
     @app.after_request
-    def log_response(response):
+    def after_request_with_metrics(response):
+        start = request.environ.get('_start_time')
+        if start:
+            latency = time.time() - start
+            error = response.status_code >= 400
+            metrics.record_request(request.path, latency, error)
         logger = get_logger('mirofish.request')
         logger.debug(f"响应: {response.status_code}")
         return response
@@ -86,6 +116,12 @@ def create_app(config_class=Config):
     @app.route('/health')
     def health():
         return {'status': 'ok', 'service': 'MiroFish Backend'}
+    
+    # Metrics endpoint
+    @app.route('/api/metrics')
+    def get_metrics():
+        from .utils.monitoring import MetricsCollector
+        return MetricsCollector().get_metrics()
     
     # Serve frontend SPA (catch-all for non-API paths)
     frontend_dir = os.path.join(app.root_path, '..', 'frontend')

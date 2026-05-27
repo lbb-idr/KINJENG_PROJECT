@@ -71,7 +71,7 @@ def setup_logger(name: str = 'mirofish', level: int = logging.DEBUG) -> logging.
         backupCount=5,
         encoding='utf-8'
     )
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(detailed_formatter)
     
     # 2. 控制台处理器 - 简洁日志（INFO及以上）

@@ -31,7 +31,35 @@ class Config:
     LLM_API_KEY = os.environ.get('LLM_API_KEY').strip() if os.environ.get('LLM_API_KEY') else None
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '').strip() or None
+
+    @classmethod
+    @property
+    def LLM_PROVIDERS(cls):
+        return [
+            {
+                'name': 'nvidia',
+                'api_key': cls.LLM_API_KEY,
+                'base_url': cls.LLM_BASE_URL,
+                'model': cls.LLM_MODEL_NAME,
+            },
+            {
+                'name': 'openai',
+                'api_key': cls.OPENAI_API_KEY,
+                'base_url': 'https://api.openai.com/v1',
+                'model': 'gpt-4o-mini',
+            },
+            {
+                'name': 'ollama',
+                'api_key': 'ollama',
+                'base_url': 'http://127.0.0.1:11434/v1',
+                'model': 'llama3.1:8b',
+            },
+        ]
     
+    # Sentry
+    SENTRY_DSN = os.environ.get('SENTRY_DSN')
+
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
     
@@ -40,6 +68,10 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '../uploads')
     ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt', 'markdown'}
     
+    # Database config
+    SQLITE_PATH = os.environ.get('SQLITE_PATH', os.path.join(os.path.dirname(__file__), '../data/mirofish.db'))
+    DATABASE_URL = os.environ.get('DATABASE_URL')  # for future PostgreSQL migration
+
     # 文本处理配置
     DEFAULT_CHUNK_SIZE = 500  # 默认切块大小
     DEFAULT_CHUNK_OVERLAP = 50  # 默认重叠大小

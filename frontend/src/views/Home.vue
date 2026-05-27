@@ -147,7 +147,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import NavBar from '../components/NavBar.vue'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
@@ -193,10 +193,11 @@ const addFiles = (newFiles) => {
 }
 const removeFile = (index) => { files.value.splice(index, 1) }
 
-const startSimulation = () => {
+const startSimulation = async () => {
   if (!canSubmit.value || loading.value) return
   loading.value = true
   setPendingUpload(files.value, formData.value.simulationRequirement)
+  await nextTick()
   router.push({ name: 'Process', params: { projectId: 'new' } })
 }
 </script>
