@@ -22,6 +22,7 @@ from .prompts import (
     get_sim_type_prompt_context, get_system_prompt,
     build_individual_persona_prompt, build_group_persona_prompt
 )
+from ..agent_identity import build_agent_identity
 from .utils import (
     generate_username, try_fix_json, normalize_gender,
     generate_profile_rule_based, print_generated_profile
@@ -125,7 +126,7 @@ class OasisProfileGenerator:
                 entity_attributes=entity.attributes
             )
 
-        return OasisAgentProfile(
+        profile = OasisAgentProfile(
             user_id=user_id,
             user_name=user_name,
             name=name,
@@ -148,6 +149,14 @@ class OasisProfileGenerator:
             source_entity_uuid=entity.uuid,
             source_entity_type=entity_type,
         )
+
+        # Build Agent Identity Signature (TribeV2-inspired per-subject layer)
+        build_agent_identity(
+            agent_id=str(user_id),
+            profile_data=profile_data
+        )
+
+        return profile
 
     def _search_zep_for_entity(self, entity: EntityNode) -> Dict[str, Any]:
         """

@@ -10,6 +10,7 @@ from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
 from .inner_parliament import InnerParliament, DebateRound
 from .survey_memory import SurveyMemory
+from .agent_identity import get_identity_context, get_signature, build_agent_identity
 
 logger = get_logger('kinjeng.cognitive.pipeline')
 
@@ -156,6 +157,7 @@ class CognitivePipeline:
     ) -> Dict[str, Any]:
         debate_round = self.parliament.debate(question, persona, likert_scale)
         memory_context = memory.get_context_block() if memory else ""
+        identity_context = get_identity_context(agent_id)
         education = persona.get("education", "?")
         cognitive = persona.get("cognitive_style", persona.get("trait", ""))
         knowledge = persona.get("knowledge_level", "?")
@@ -172,6 +174,7 @@ class CognitivePipeline:
                             f"Anda adalah partisipan survei. Profil:\n"
                             f"{debate_round.persona_summary}\n"
                             f"{persona_extra}\n\n"
+                            f"{identity_context}\n\n"
                             f"{memory_context}\n\n"
                             f"Jawab pertanyaan berikut dengan 1-2 kalimat singkat dan natural."
                         )},
@@ -206,21 +209,36 @@ class CognitivePipeline:
         if not options:
             return {"answer": "", "confidence": 0.0}
 
+        sig = get_signature(agent_id)
         idx_offset = persona.get("age", 30) % len(options)
         opinion_bias = persona.get("opinion_bias", "Seimbang")
         
-        if opinion_bias == "Hati-hati":
-            idx = 0
-        elif opinion_bias == "Terbuka":
-            idx = len(options) - 1
-        elif opinion_bias == "Seimbang":
-            idx = len(options) // 2
+        # Identity-biased selection
+        if sig:
+            base_idx = len(options) // 2
+            # opinion bias → shift selection
+            bias_shift = int(sig.opinion_bias * (len(options) // 2))
+            idx = max(0, min(len(options) - 1, base_idx + bias_shift))
+            # typicality: low typicality = more random
+            if sig.typicality < 0.3:
+                import random
+                rng = random.Random(agent_id + question)
+                idx = rng.randint(0, len(options) - 1)
+            confidence = 0.5 + 0.4 * sig.typicality * sig.knowledge_factor
         else:
-            idx = (idx_offset + hash(question) % len(options)) % len(options)
+            if opinion_bias == "Hati-hati":
+                idx = 0
+            elif opinion_bias == "Terbuka":
+                idx = len(options) - 1
+            elif opinion_bias == "Seimbang":
+                idx = len(options) // 2
+            else:
+                idx = (idx_offset + hash(question) % len(options)) % len(options)
+            confidence = 0.7
 
         return {
             "answer": options[idx],
-            "confidence": 0.7
+            "confidence": min(1.0, confidence)
         }
 
     def _handle_open(
@@ -232,6 +250,7 @@ class CognitivePipeline:
         max_length: int = 500
     ) -> Dict[str, Any]:
         memory_context = memory.get_context_block() if memory else ""
+        identity_context = get_identity_context(agent_id)
         persona_summary = (
             f"Usia: {persona.get('age', '?')}, "
             f"Pekerjaan: {persona.get('occupation', '?')}, "
@@ -249,6 +268,7 @@ class CognitivePipeline:
                     messages=[
                         {"role": "system", "content": (
                             f"Anda adalah partisipan survei.\n{persona_summary}\n\n"
+                            f"{identity_context}\n\n"
                             f"{memory_context}\n\n"
                             f"Jawab dengan 1-3 kalimat alami seperti manusia biasa. "
                             f"Maksimal {max_length} karakter."
@@ -315,6 +335,10 @@ class SurveyEngine:
         # Gunakan personas sebagai fallback agent_profiles
         if not self.agent_profiles:
             self.agent_profiles = personas
+        # Build Agent Identity untuk setiap persona (TribeV2-inspired per-subject layer)
+        for p in personas:
+            agent_id = str(p.get('agent_id', p.get('user_id', 'unknown')))
+            build_agent_identity(agent_id, p)
 
     def _map_persona_for_debate(self, persona: Dict) -> Dict:
         """Map AcademicPersonaGenerator format → SurveyDebateService format."""

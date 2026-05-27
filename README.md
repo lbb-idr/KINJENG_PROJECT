@@ -43,7 +43,23 @@ Alur kerjanya: **unggah data → AI menciptakan masyarakat digital → agen beri
 
 KINJENG_PROJECT menggunakan **[MiroFish](https://github.com/666ghj/MiroFish)** sebagai mesin simulasi multi-agent. MiroFish merupakan platform simulasi sosial berbasis AI yang telah mature dan didukung oleh **[OASIS](https://github.com/camel-ai/oasis)** dari CAMEL-AI untuk simulasi interaksi agen di platform sosial.
 
-Pembangunan identitas agen dan cara agen merespons menggunakan logika dari **[TribeV2](https://github.com/facebookresearch/tribev2.git)** milik Meta (Facebook Research). TribeV2 menyediakan kerangka kerja untuk membangun agen dengan kepribadian, ingatan, dan pola pengambilan keputusan yang realistis.
+### TribeV2 Integration — Per-Agent Cognitive Identity
+
+Sistem identitas agen di KINJENG_PROJECT terinspirasi dari **[TRIBE v2](https://github.com/facebookresearch/tribev2)** (Meta FAIR, 2026), sebuah multimodal foundation model yang memprediksi aktivitas fMRI otak manusia dari stimulus video/audio/teks. Konsep kunci yang diadopsi:
+
+| Konsep TribeV2 | Implementasi di KINJENG_PROJECT |
+|----------------|----------------------------------|
+| **SubjectLayers** — setiap subjek fMRI punya linear layer unik yang memetakan shared brain representation ke output spesifik | **AgentIdentitySignature** — setiap agen punya vektor identitas 15+ dimensi (MBTI, cognitive style, education, knowledge, IQ, opinion bias) yang memodulasi semua respons |
+| **Typicality** — seberapa "standar" aktivasi otak seseorang vs rata-rata populasi | Setiap agen punya skor *typicality*: agen dengan kepribadian tertentu (e.g. Neuroticism tinggi) menghasilkan respons lebih idiosinkratik |
+| **Multimodal feature extraction** — LLaMA 3.2 (text), V-JEPA2 (video), Wav2Vec-BERT (audio) | *Processing modality* — agen visual vs verbal punya preferensi cara berpikir berbeda, terinspirasi dari riset Kraemer et al. (2009) |
+
+Selain TribeV2, sistem ini juga didasarkan pada riset neuroscience terkini:
+- **Personality → Brain typicality**: Neuroticism/Harm Avoidance → lower brain typicality (Krauss et al., 2024-2025)
+- **Cognitive Style → Neural Pathway**: Visualizers vs Verbalizers menggunakan jalur otak berbeda untuk stimulus linguistik yang sama (Kraemer et al., 2009)
+- **Hierarchical Linguistic Prediction**: Otak memprediksi kata DAN kalimat secara simultan; higher-level representations diupdate hanya di sentence boundaries (Communications Biology, 2025)
+- **Reading Experience → Neural Individuality**: Semakin banyak pengalaman membaca, semakin idiosinkratik pola otak saat membaca teks ekspositori (PMC, 2025)
+
+Detail implementasi: `backend/app/services/agent_identity.py`
 
 ## Development
 

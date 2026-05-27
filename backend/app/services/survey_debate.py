@@ -23,6 +23,7 @@ from typing import Dict, Any, List, Optional
 from ..config import Config
 from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
+from .agent_identity import get_identity_context, get_signature, build_agent_identity
 
 logger = get_logger('kinjeng.survey_debate')
 
@@ -225,10 +226,17 @@ class SurveyDebateService:
         scale = session.likert_scale
 
         transcript = self._format_transcript(session)
+        agent_identities = "\n".join(
+            f"- {a.get('name', '?' )}: "
+            f"Usia {a.get('age', '?')}, {a.get('profession', a.get('occupation', '?'))}, "
+            f"Opini {a.get('opinion_bias', '?')}"
+            for a in session.agents
+        )
         prompt = (
             f"Anda adalah KETUA DEBAT yang membaca seluruh diskusi publik antara "
             f"{len(session.agents)} partisipan tentang pertanyaan survei:\n\n"
             f"Pertanyaan: {session.question_text}\n\n"
+            f"Identitas partisipan:\n{agent_identities}\n\n"
             f"Berikut transkrip debat:\n{transcript}\n\n"
             f"Tugas Anda:\n"
             f"1. Analisis semua argumen yang muncul\n"
@@ -258,11 +266,14 @@ class SurveyDebateService:
     # ── Helpers ─────────────────────────────────────────
 
     def _format_persona(self, agent: Dict[str, Any]) -> str:
+        agent_id = str(agent.get('user_id', ''))
+        identity_ctx = get_identity_context(agent_id)
         return (
             f"Usia: {agent.get('age', '?')}, "
             f"Pekerjaan: {agent.get('profession', agent.get('occupation', '?'))}, "
             f"Kepribadian: {agent.get('personality', agent.get('mbti', '?'))}, "
-            f"Opini: {agent.get('opinion_bias', 'Seimbang')}"
+            f"Opini: {agent.get('opinion_bias', 'Seimbang')}\n"
+            f"{identity_ctx}"
         )
 
     def _get_other_posts(self, session: DebateSession, agent_user_id, round_num: int) -> str:

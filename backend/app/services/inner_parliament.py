@@ -16,6 +16,7 @@ from dataclasses import dataclass, field, asdict
 
 from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
+from .agent_identity import get_identity_context, get_signature
 
 logger = get_logger('kinjeng.cognitive.parliament')
 
@@ -213,6 +214,8 @@ class InnerParliament:
         likert_scale: int
     ) -> DebateRound:
         llm = self._get_llm()
+        agent_id = persona.get('agent_id', str(persona.get('user_id', 'unknown')))
+        identity_context = get_identity_context(agent_id)
         scale_labels = {1: "Sangat Tidak Setuju", 2: "Tidak Setuju", 3: "Netral", 4: "Setuju", 5: "Sangat Setuju"}
         if likert_scale == 7:
             scale_labels = {1: "STS", 2: "TS", 3: "ATS", 4: "N", 5: "AS", 6: "S", 7: "SS"}
@@ -220,6 +223,7 @@ class InnerParliament:
         system_base = (
             f"Anda adalah partisipan survei dengan profil berikut:\n"
             f"{round_data.persona_summary}\n\n"
+            f"{identity_context}\n\n"
             f"Skala Likert {likert_scale}-point: "
             f"{', '.join(f'{k}={v}' for k, v in scale_labels.items())}\n\n"
             f"Jawab dengan format:\n"
@@ -289,6 +293,9 @@ class InnerParliament:
         likert_scale: int
     ) -> DebateRound:
         """Lightweight rule-based debate simulation (no LLM needed)."""
+        agent_id = persona.get('agent_id', str(persona.get('user_id', 'unknown')))
+        sig = get_signature(agent_id)
+        
         opinion_bias_map = {
             "Hati-hati": 0.6, "Seimbang": 0.5, "Terbuka": 0.4, "Netral": 0.5
         }
@@ -296,6 +303,11 @@ class InnerParliament:
 
         base_bias = opinion_bias_map.get(persona.get("opinion_bias", "Seimbang"), 0.5)
         knowledge = knowledge_map.get(persona.get("knowledge_level", "Sedang"), 0.5)
+
+        # Identity modulation (TribeV2-inspired: per-subject layer adjustment)
+        if sig:
+            base_bias = max(0.0, min(1.0, base_bias + sig.opinion_bias * 0.15))
+            knowledge = max(0.0, min(1.0, knowledge + (sig.knowledge_factor + sig.education_factor) / 2 * 0.1))
 
         perspective_sentiments = {
             "rationalist": base_bias * (0.7 + 0.3 * knowledge),
