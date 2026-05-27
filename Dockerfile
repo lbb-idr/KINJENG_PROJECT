@@ -1,3 +1,13 @@
+# Stage 1: Build frontend
+FROM node:18-alpine AS frontend-builder
+
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+# Stage 2: Backend
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -18,6 +28,9 @@ COPY locales/ /locales/
 
 # Copy backend source code
 COPY backend/ .
+
+# Copy built frontend from stage 1
+COPY --from=frontend-builder /app/dist/ /app/frontend/
 
 # Create uploads directory
 RUN mkdir -p uploads/simulations

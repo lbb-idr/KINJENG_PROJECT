@@ -9,8 +9,9 @@ import warnings
 # 需要在所有其他导入之前设置
 warnings.filterwarnings("ignore", message=".*resource_tracker.*")
 
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 from flask_cors import CORS
+from werkzeug.exceptions import NotFound
 
 from .config import Config
 from .utils.logger import setup_logger, get_logger
@@ -78,6 +79,20 @@ def create_app(config_class=Config):
     @app.route('/health')
     def health():
         return {'status': 'ok', 'service': 'MiroFish Backend'}
+    
+    # Serve frontend SPA (catch-all for non-API paths)
+    frontend_dir = os.path.join(app.root_path, '..', 'frontend')
+    
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve_frontend(path):
+        if path.startswith('api/'):
+            from flask import abort
+            abort(404)
+        try:
+            return send_from_directory(frontend_dir, path or 'index.html')
+        except NotFound:
+            return send_from_directory(frontend_dir, 'index.html')
     
     if should_log_startup:
         logger.info("MiroFish Backend 启动完成")
