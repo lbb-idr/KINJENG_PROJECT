@@ -1,6 +1,10 @@
-# KINJENG_PROJECT
+<p align="center">
+  <img src="./static/image/KINJENG_Project_logo.jpeg" alt="KINJENG_PROJECT Logo" width="400"/>
+</p>
 
-**Platform Simulasi Multi-Agent untuk Riset Sosial**
+<h1 align="center">KINJENG_PROJECT</h1>
+
+<p align="center"><strong>Platform Simulasi Multi-Agent untuk Riset Sosial</strong></p>
 
 KINJENG_PROJECT adalah platform simulasi sosial berbasis AI. Pengguna dapat mengunggah dokumen, kemudian sistem akan menciptakan agen-agen virtual yang memiliki kepribadian, ingatan, dan pola pikir masing-masing. Agen-agen ini akan berinteraksi, berdiskusi, dan berdebat satu sama lain — layaknya masyarakat nyata. Hasil simulasi dapat dilihat dalam bentuk grafik, statistik, dan laporan PDF.
 
