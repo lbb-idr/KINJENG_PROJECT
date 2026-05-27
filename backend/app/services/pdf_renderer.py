@@ -19,7 +19,7 @@ except ImportError:
 from ..config import Config
 from ..utils.logger import get_logger
 
-logger = get_logger('mirofish.report.pdf')
+logger = get_logger('kinjeng.report.pdf')
 
 try:
     from weasyprint import HTML

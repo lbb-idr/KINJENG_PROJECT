@@ -19,7 +19,7 @@ from ...utils.locale import t, get_locale, set_locale
 from ...models.project import ProjectManager
 from ...models.task import TaskManager, TaskStatus
 
-logger = get_logger('mirofish.api.simulation')
+logger = get_logger('kinjeng.api.simulation')
 
 
 def _check_simulation_prepared(simulation_id: str) -> tuple:
@@ -148,7 +148,7 @@ def create_simulation():
     请求（JSON）：
         {
             "project_id": "proj_xxxx",      // 必填
-            "graph_id": "mirofish_xxxx",    // 可选，如不提供则从project获取
+            "graph_id": "kinjeng_xxxx",    // 可选，如不提供则从project获取
             "enable_twitter": true,          // 可选，默认true
             "enable_reddit": true            // 可选，默认true
         }
@@ -159,7 +159,7 @@ def create_simulation():
             "data": {
                 "simulation_id": "sim_xxxx",
                 "project_id": "proj_xxxx",
-                "graph_id": "mirofish_xxxx",
+                "graph_id": "kinjeng_xxxx",
                 "status": "created",
                 "enable_twitter": true,
                 "enable_reddit": true,

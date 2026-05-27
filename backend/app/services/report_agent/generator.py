@@ -20,7 +20,7 @@ from ...utils.logger import get_logger
 from .models import Report, ReportOutline, ReportSection, ReportStatus
 from .logger import ReportLogger, ReportConsoleLogger
 
-logger = get_logger('mirofish.report_agent')
+logger = get_logger('kinjeng.report_agent')
 
 
 # ── 章节生成 prompt ──

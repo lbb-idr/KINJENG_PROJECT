@@ -25,7 +25,7 @@ from .state import RunnerStatus, AgentAction, RoundSummary, SimulationRunState
 from .heartbeat import HeartbeatMixin
 from .process import SubprocessMixin, IS_WINDOWS
 
-logger = get_logger('mirofish.simulation_runner')
+logger = get_logger('kinjeng.simulation_runner')
 
 
 class SimulationRunner(HeartbeatMixin, SubprocessMixin):

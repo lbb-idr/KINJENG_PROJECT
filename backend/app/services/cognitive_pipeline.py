@@ -11,7 +11,7 @@ from ..utils.llm_client import LLMClient
 from .inner_parliament import InnerParliament, DebateRound
 from .survey_memory import SurveyMemory
 
-logger = get_logger('mirofish.cognitive.pipeline')
+logger = get_logger('kinjeng.cognitive.pipeline')
 
 
 @dataclass

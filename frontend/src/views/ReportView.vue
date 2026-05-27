@@ -3,7 +3,7 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand" @click="router.push(\'/\')">KINJENG</div>
       </div>
       
       <div class="header-center">
@@ -120,7 +120,7 @@ const showRetry = ref(false)
 const retrying = ref(false)
 
 // Session persistence
-const STORAGE_KEY = 'mirofish_report'
+const STORAGE_KEY = 'kinjeng_report'
 function saveSession() {
   if (!currentReportId.value) return
   try {

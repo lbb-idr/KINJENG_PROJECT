@@ -12,7 +12,7 @@ from ..config import Config
 from .retry import retry_with_backoff
 from ..utils.logger import get_logger
 
-logger = get_logger('mirofish.llm_client')
+logger = get_logger('kinjeng.llm_client')
 
 
 class LLMClient:

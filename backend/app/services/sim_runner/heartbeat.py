@@ -8,7 +8,7 @@ from typing import Dict, Optional
 
 from ...utils.logger import get_logger
 
-logger = get_logger('mirofish.simulation_runner')
+logger = get_logger('kinjeng.simulation_runner')
 
 _cleanup_registered = False
 

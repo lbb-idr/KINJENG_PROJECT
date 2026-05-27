@@ -22,7 +22,7 @@ from ...utils.logger import get_logger
 from ...utils.locale import t
 from ...models.project import ProjectManager
 
-logger = get_logger('mirofish.api.simulation')
+logger = get_logger('kinjeng.api.simulation')
 
 
 # ============== 模拟运行控制接口 ==============

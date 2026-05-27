@@ -13,7 +13,7 @@ from ...utils.locale import get_language_instruction, t
 from ...utils.logger import get_logger
 from .models import ReportSection, ReportOutline
 
-logger = get_logger('mirofish.report_agent')
+logger = get_logger('kinjeng.report_agent')
 
 
 # ── 大纲规划 prompt ──

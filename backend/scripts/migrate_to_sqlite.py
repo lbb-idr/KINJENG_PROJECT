@@ -6,7 +6,7 @@ Usage:
     cd backend
     python scripts/migrate_to_sqlite.py
     # or with explicit path:
-    python scripts/migrate_to_sqlite.py --db-path ../data/mirofish.db
+    python scripts/migrate_to_sqlite.py --db-path ../data/kinjeng.db
 """
 import os
 import sys
@@ -17,7 +17,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-os.environ.setdefault('SQLITE_PATH', os.path.join(os.path.dirname(__file__), '../data/mirofish.db'))
+os.environ.setdefault('SQLITE_PATH', os.path.join(os.path.dirname(__file__), '../data/kinjeng.db'))
 
 from app.utils.database import DatabaseManager
 from app.config import Config

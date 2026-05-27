@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 from ...utils.logger import get_logger
 from ...utils.locale import t
 
-logger = get_logger('mirofish.zep_tools.graph')
+logger = get_logger('kinjeng.zep_tools.graph')
 
 
 class GraphMixin:

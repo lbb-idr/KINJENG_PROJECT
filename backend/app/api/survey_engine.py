@@ -15,7 +15,7 @@ from ..services.survey_service import AcademicPersonaGenerator, SurveyTemplateSe
 from ..services.cognitive_pipeline import SurveyEngine
 from ..utils.logger import get_logger
 
-logger = get_logger('mirofish.api.survey_engine')
+logger = get_logger('kinjeng.api.survey_engine')
 
 
 @survey_bp.route('/generate', methods=['POST'])

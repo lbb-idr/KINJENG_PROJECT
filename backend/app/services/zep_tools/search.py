@@ -10,7 +10,7 @@ from ...utils.locale import get_locale, t
 
 from . import SearchResult, NodeInfo, EdgeInfo, PanoramaResult, AgentInterview, InterviewResult
 
-logger = get_logger('mirofish.zep_tools.search')
+logger = get_logger('kinjeng.zep_tools.search')
 
 
 class SearchMixin:

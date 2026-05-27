@@ -9,7 +9,7 @@ from ...utils.locale import t
 
 from . import InsightForgeResult, NodeInfo
 
-logger = get_logger('mirofish.zep_tools.insights')
+logger = get_logger('kinjeng.zep_tools.insights')
 
 
 class InsightsMixin:

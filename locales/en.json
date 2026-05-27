@@ -69,7 +69,7 @@
     "inputParams": "Input Parameters",
     "simulationPrompt": ">_ 02 / Simulation Prompt",
     "promptPlaceholder": "// Describe your simulation or prediction requirement in natural language",
-    "engineBadge": "Engine: MiroFish-V1.0",
+    "engineBadge": "Engine: KINJENG V1.0",
     "startEngine": "Start Engine",
     "initializing": "Initializing...",
     "selectTypeFirst": "+ Select Simulation Type",

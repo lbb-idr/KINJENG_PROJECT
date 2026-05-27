@@ -30,7 +30,7 @@ def create_app(config_class=Config):
         app.json.ensure_ascii = False
     
     # 设置日志
-    logger = setup_logger('mirofish')
+    logger = setup_logger('kinjeng')
     
     # 只在 reloader 子进程中打印启动信息（避免 debug 模式下打印两次）
     is_reloader_process = os.environ.get('WERKZEUG_RUN_MAIN') == 'true'
@@ -91,7 +91,7 @@ def create_app(config_class=Config):
     def before_request_with_metrics():
         touch()
         request.environ['_start_time'] = time.time()
-        logger = get_logger('mirofish.request')
+        logger = get_logger('kinjeng.request')
         logger.debug(f"请求: {request.method} {request.path}")
         if request.content_type and 'json' in request.content_type:
             logger.debug(f"请求体: {request.get_json(silent=True)}")
@@ -103,7 +103,7 @@ def create_app(config_class=Config):
             latency = time.time() - start
             error = response.status_code >= 400
             metrics.record_request(request.path, latency, error)
-        logger = get_logger('mirofish.request')
+        logger = get_logger('kinjeng.request')
         logger.debug(f"响应: {response.status_code}")
         return response
     

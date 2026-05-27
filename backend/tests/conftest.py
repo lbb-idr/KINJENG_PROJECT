@@ -9,7 +9,7 @@ from app.utils.database import DatabaseManager
 def test_db():
     """Use in-memory SQLite for all tests"""
     import tempfile
-    db_path = os.path.join(tempfile.gettempdir(), 'mirofish_test.db')
+    db_path = os.path.join(tempfile.gettempdir(), 'kinjeng_test.db')
     os.environ['SQLITE_PATH'] = db_path
     db = DatabaseManager()
     db._initialized = False

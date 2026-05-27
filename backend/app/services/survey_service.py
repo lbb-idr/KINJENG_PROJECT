@@ -12,7 +12,7 @@ from ..config import Config
 from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
 
-logger = get_logger('mirofish.api.survey')
+logger = get_logger('kinjeng.api.survey')
 
 ACADEMIC_TEMPLATES = {
     "likert_5": {

@@ -18,7 +18,7 @@ from ...services.simulation_manager import SimulationManager
 from ...utils.logger import get_logger
 from ...utils.locale import t
 
-logger = get_logger('mirofish.api.simulation')
+logger = get_logger('kinjeng.api.simulation')
 
 
 # ============== Profile 接口 ==============
@@ -176,7 +176,7 @@ def generate_profiles():
     
     请求（JSON）：
         {
-            "graph_id": "mirofish_xxxx",     // 必填
+            "graph_id": "kinjeng_xxxx",     // 必填
             "entity_types": ["Student"],      // 可选
             "use_llm": true,                  // 可选
             "platform": "reddit"              // 可选

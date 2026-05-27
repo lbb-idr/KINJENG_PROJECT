@@ -10,7 +10,7 @@ from ..config import Config
 from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
 
-logger = get_logger('mirofish.survey.generator')
+logger = get_logger('kinjeng.survey.generator')
 
 
 SIM_TYPE_PROMPTS = {

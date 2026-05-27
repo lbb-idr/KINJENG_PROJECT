@@ -14,7 +14,7 @@ from ..services.report_agent import ReportManager
 from ..models.project import ProjectManager
 from ..utils.logger import get_logger
 
-logger = get_logger('mirofish.api.report_pdf')
+logger = get_logger('kinjeng.api.report_pdf')
 
 
 @survey_bp.route('/report/generate/<project_id>', methods=['POST'])

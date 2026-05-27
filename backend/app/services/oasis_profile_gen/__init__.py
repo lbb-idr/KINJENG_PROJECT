@@ -27,7 +27,7 @@ from .utils import (
     generate_profile_rule_based, print_generated_profile
 )
 
-logger = get_logger('mirofish.oasis_profile')
+logger = get_logger('kinjeng.oasis_profile')
 
 
 class OasisProfileGenerator:

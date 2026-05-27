@@ -16,7 +16,7 @@
       >
         {{ link.icon }} {{ link.label }}
       </button>
-      <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link" @click="menuOpen = false">
+      <a href="https://github.com/lbb-idr/KINJENG_PROJECT" target="_blank" class="github-link" @click="menuOpen = false">
         {{ $t('nav.visitGithub') }} <span class="arrow">↗</span>
       </a>
     </div>

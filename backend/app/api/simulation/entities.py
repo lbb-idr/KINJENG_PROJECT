@@ -12,7 +12,7 @@ from ...services.zep_entity_reader import ZepEntityReader, create_entity_reader
 from ...utils.logger import get_logger
 from ...utils.locale import t
 
-logger = get_logger('mirofish.api.simulation')
+logger = get_logger('kinjeng.api.simulation')
 
 
 # ============== 实体读取接口 ==============

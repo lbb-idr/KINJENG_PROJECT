@@ -16,7 +16,7 @@ from zep_cloud.client import Zep
 from .logger import get_logger
 from .zep_rate_limit import rate_limit
 
-logger = get_logger('mirofish.zep_paging')
+logger = get_logger('kinjeng.zep_paging')
 
 _DEFAULT_PAGE_SIZE = 100
 _MAX_NODES = 2000

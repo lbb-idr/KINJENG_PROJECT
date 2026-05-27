@@ -11,7 +11,7 @@ from ...utils.zep_paging import fetch_all_nodes, fetch_all_edges
 
 from . import NodeInfo, EdgeInfo
 
-logger = get_logger('mirofish.zep_tools.entities')
+logger = get_logger('kinjeng.zep_tools.entities')
 
 
 class EntitiesMixin:

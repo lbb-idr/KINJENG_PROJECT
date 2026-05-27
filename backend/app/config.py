@@ -21,7 +21,7 @@ class Config:
     """Flask配置类"""
     
     # Flask配置
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'mirofish-secret-key')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'kinjeng-secret-key')
     DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
 
     # JWT配置
@@ -80,7 +80,7 @@ class Config:
     ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt', 'markdown'}
     
     # Database config
-    SQLITE_PATH = os.environ.get('SQLITE_PATH', os.path.join(os.path.dirname(__file__), '../data/mirofish.db'))
+    SQLITE_PATH = os.environ.get('SQLITE_PATH', os.path.join(os.path.dirname(__file__), '../data/kinjeng.db'))
     DATABASE_URL = os.environ.get('DATABASE_URL')  # for future PostgreSQL migration
 
     # 文本处理配置

@@ -3,7 +3,7 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand" @click="router.push(\'/\')">KINJENG</div>
       </div>
       
       <div class="header-center">
@@ -77,7 +77,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import { useI18n } from 'vue-i18n'
 import pendingUpload from '../store/pendingUpload'
 
-const STORAGE_KEY = 'mirofish_sim_setup'
+const STORAGE_KEY = 'kinjeng_sim_setup'
 
 const { t } = useI18n()
 const route = useRoute()

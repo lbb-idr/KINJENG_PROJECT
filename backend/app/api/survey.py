@@ -9,7 +9,7 @@ from . import survey_bp
 from ..services.survey_service import SurveyTemplateService, AcademicPersonaGenerator
 from ..utils.logger import get_logger
 
-logger = get_logger('mirofish.api.survey')
+logger = get_logger('kinjeng.api.survey')
 
 
 @survey_bp.route('/templates', methods=['GET'])

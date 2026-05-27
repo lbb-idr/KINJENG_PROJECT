@@ -68,7 +68,7 @@ class GraphBuilderService:
         self.mode = mode or _get_graph_mode()
         self.api_key = api_key or Config.ZEP_API_KEY
         self.task_manager = TaskManager()
-        self.logger = get_logger('mirofish.graph_builder')
+        self.logger = get_logger('kinjeng.graph_builder')
         
         if self.mode == 'local':
             from .local_graph_store import LocalGraphStore
@@ -229,7 +229,7 @@ class GraphBuilderService:
             self.task_manager.fail_task(task_id, error_msg)
     
     def create_graph(self, name: str) -> str:
-        graph_id = f"mirofish_{uuid.uuid4().hex[:16]}"
+        graph_id = f"kinjeng_{uuid.uuid4().hex[:16]}"
         if self.mode == 'local':
             self.local.create(graph_id, name, "KINJENG_PROJECT Social Simulation Graph")
         else:

@@ -2,7 +2,7 @@
   <div class="results-container">
     <header class="step-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand" @click="router.push(\'/\')">KINJENG</div>
       </div>
       <div class="header-center">
         <div class="workflow-step">

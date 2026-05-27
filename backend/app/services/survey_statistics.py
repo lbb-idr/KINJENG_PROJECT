@@ -9,7 +9,7 @@ from collections import Counter, defaultdict
 
 from ..utils.logger import get_logger
 
-logger = get_logger('mirofish.survey.stats')
+logger = get_logger('kinjeng.survey.stats')
 
 
 class SurveyStatistics:

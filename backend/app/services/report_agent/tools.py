@@ -13,7 +13,7 @@ from typing import Dict, Any, List
 from ...utils.locale import t
 from ...utils.logger import get_logger
 
-logger = get_logger('mirofish.report_agent')
+logger = get_logger('kinjeng.report_agent')
 
 
 # ── 工具描述 ──

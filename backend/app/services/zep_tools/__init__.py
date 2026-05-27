@@ -20,7 +20,7 @@ from ...utils.logger import get_logger
 from ...utils.llm_client import LLMClient
 from ...utils.locale import t
 
-logger = get_logger('mirofish.zep_tools')
+logger = get_logger('kinjeng.zep_tools')
 
 # ============================================================
 # Data classes / models

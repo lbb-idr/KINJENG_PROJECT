@@ -8,7 +8,7 @@ from ..config import Config
 from ..utils.llm_client import LLMClient
 from ..utils.logger import get_logger
 
-logger = get_logger('mirofish.local_graph')
+logger = get_logger('kinjeng.local_graph')
 
 GRAPHS_DIR = os.path.join(os.path.dirname(__file__), '../data/graphs')
 

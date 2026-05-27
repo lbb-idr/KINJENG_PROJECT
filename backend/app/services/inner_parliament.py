@@ -17,7 +17,7 @@ from dataclasses import dataclass, field, asdict
 from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
 
-logger = get_logger('mirofish.cognitive.parliament')
+logger = get_logger('kinjeng.cognitive.parliament')
 
 
 DEBATE_PERSPECTIVES = {

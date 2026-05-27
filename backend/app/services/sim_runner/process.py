@@ -11,7 +11,7 @@ from ...utils.locale import set_locale
 from ..zep_graph_memory_updater import ZepGraphMemoryManager
 from .state import RunnerStatus, AgentAction, SimulationRunState
 
-logger = get_logger('mirofish.simulation_runner')
+logger = get_logger('kinjeng.simulation_runner')
 
 IS_WINDOWS = os.name == 'nt'
 

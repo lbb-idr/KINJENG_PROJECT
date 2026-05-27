@@ -3,7 +3,7 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand" @click="router.push(\'/\')">KINJENG</div>
       </div>
       
       <div class="header-center">
@@ -80,7 +80,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import { useI18n } from 'vue-i18n'
 
 const API = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL + '/api' : (import.meta.env.PROD ? '/api' : 'http://localhost:5001/api')
-const STORAGE_KEY = 'mirofish_sim_run'
+const STORAGE_KEY = 'kinjeng_sim_run'
 
 const { t } = useI18n()
 const route = useRoute()

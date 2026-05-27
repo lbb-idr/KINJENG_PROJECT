@@ -37,7 +37,7 @@
           <div class="splash-feature">
             <span class="splash-bullet" />
             <div>
-              <span class="splash-feature-title">Engine MiroFish V1.0</span>
+              <span class="splash-feature-title">KINJENG Engine V1.0</span>
               <span class="splash-feature-desc">Model simulasi kognitif agen sosiokultural.</span>
             </div>
           </div>

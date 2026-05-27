@@ -23,7 +23,7 @@ from .generator import SectionGenerator, ReportManager
 from .tools import ReportTools
 from .models import ReportStatus, ReportSection, ReportOutline, Report
 
-logger = get_logger('mirofish.report_agent')
+logger = get_logger('kinjeng.report_agent')
 
 
 class ReportAgent(OutlinePlanner, SectionGenerator, ReportTools):

@@ -14,7 +14,7 @@ from ..services.cognitive_pipeline import CognitivePipeline, SurveyEngine
 from ..services.survey_service import SurveyTemplateService, AcademicPersonaGenerator
 from ..utils.logger import get_logger
 
-logger = get_logger('mirofish.api.cognitive')
+logger = get_logger('kinjeng.api.cognitive')
 
 
 @cognitive_bp.route('/parliament/perspectives', methods=['GET'])
