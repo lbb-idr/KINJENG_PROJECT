@@ -16,6 +16,7 @@ from werkzeug.exceptions import NotFound
 
 from .config import Config
 from .utils.logger import setup_logger, get_logger
+from .auth import auth_bp, init_jwt
 
 
 def create_app(config_class=Config):
@@ -49,6 +50,9 @@ def create_app(config_class=Config):
     DatabaseManager().init_app(app)
     if should_log_startup:
         logger.info(f"数据库路径: {Config.SQLITE_PATH}")
+
+    # Init JWT
+    init_jwt(app)
 
     # 初始化 TaskManager 持久化存储
     from .models.task import TaskManager
@@ -104,6 +108,7 @@ def create_app(config_class=Config):
         return response
     
     # 注册蓝图
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
     from .api import graph_bp, simulation_bp, report_bp, survey_bp, cognitive_bp, system_bp
     app.register_blueprint(graph_bp, url_prefix='/api/graph')
     app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
