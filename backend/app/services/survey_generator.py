@@ -1,14 +1,17 @@
 """
-Survey Generator — LLM-powered academic survey generation with document context.
+Survey Generator — LLM-powered adaptive survey generation with agent context & interrogation.
 """
 
 import json
 import os
+import random
+from collections import Counter
 from typing import Dict, Any, List, Optional
 
 from ..config import Config
 from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
+from .agent_identity import get_signature
 
 logger = get_logger('kinjeng.survey.generator')
 
@@ -37,6 +40,70 @@ SIM_TYPE_PROMPTS = {
 }
 
 
+def summarize_profiles(profiles: List[Dict[str, Any]], max_samples: int = 10) -> str:
+    """
+    Buat ringkasan demografis kumpulan profil agen untuk di-inject ke prompt LLM.
+    Ini memastikan pertanyaan survei relevan dengan karakter aktual para agen.
+    """
+    if not profiles:
+        return ""
+    
+    ages = [p.get('age', 0) for p in profiles if p.get('age')]
+    age_ranges = {}
+    for a in ages:
+        if a < 20:
+            age_ranges['<20'] = age_ranges.get('<20', 0) + 1
+        elif a < 30:
+            age_ranges['20-29'] = age_ranges.get('20-29', 0) + 1
+        elif a < 40:
+            age_ranges['30-39'] = age_ranges.get('30-39', 0) + 1
+        elif a < 55:
+            age_ranges['40-54'] = age_ranges.get('40-54', 0) + 1
+        else:
+            age_ranges['55+'] = age_ranges.get('55+', 0) + 1
+    
+    occupations = Counter(p.get('occupation', p.get('profession', 'Tidak diketahui')) for p in profiles)
+    personalities = Counter(p.get('personality', 'Tidak diketahui') for p in profiles)
+    cognitive_styles = Counter(p.get('cognitive_style', 'Tidak diketahui') for p in profiles)
+    education_levels = Counter(p.get('education_level', p.get('education', 'Tidak diketahui')) for p in profiles)
+    genders = Counter(p.get('gender', 'Tidak diketahui') for p in profiles)
+    biases = Counter(p.get('opinion_bias', 'Seimbang') for p in profiles)
+    mbti_types = Counter(p.get('mbti', 'Tidak diketahui') for p in profiles)
+    
+    lines = ["[DEMOGRAFI RESPONDEN]"]
+    lines.append(f"Total responden: {len(profiles)} orang")
+    if age_ranges:
+        lines.append("Rentang usia: " + ", ".join(f"{k}={v} orang" for k, v in sorted(age_ranges.items())))
+    if genders:
+        lines.append("Gender: " + ", ".join(f"{k}={v}" for k, v in genders.most_common(3)))
+    lines.append("")
+    
+    top_n = min(5, len(occupations))
+    lines.append("Top pekerjaan: " + ", ".join(f"{occ}({cnt})" for occ, cnt in occupations.most_common(top_n)))
+    lines.append("Top kepribadian: " + ", ".join(f"{p}({c})" for p, c in personalities.most_common(5)))
+    lines.append("Gaya kognitif: " + ", ".join(f"{cs}({c})" for cs, c in cognitive_styles.most_common(5)))
+    lines.append("Pendidikan: " + ", ".join(f"{e}({c})" for e, c in education_levels.most_common(4)))
+    lines.append("Opini bias: " + ", ".join(f"{b}({c})" for b, c in biases.most_common(5)))
+    
+    # Sample beberapa profil sebagai contoh konkret
+    lines.append("")
+    lines.append("[CONTOH RESPONDEN]")
+    samples = random.sample(profiles, min(max_samples, len(profiles)))
+    for i, p in enumerate(samples, 1):
+        lines.append(
+            f"Responden {i}: Usia {p.get('age','?')}, {p.get('gender','?')}, "
+            f"Pekerjaan {p.get('occupation', p.get('profession', '?'))}, "
+            f"Kepribadian {p.get('personality','?')} ({p.get('mbti','?')}), "
+            f"Gaya kognitif {p.get('cognitive_style','?')}, "
+            f"Pengetahuan {p.get('knowledge_level','?')}, "
+            f"IQ {p.get('iq_level','?')}, "
+            f"Opini {p.get('opinion_bias','?')}"
+        )
+    lines.append("[/DEMOGRAFI RESPONDEN]")
+    
+    return "\n".join(lines)
+
+
 class SurveyGenerator:
     """
     Generates academic-quality survey configurations using LLM,
@@ -49,22 +116,25 @@ class SurveyGenerator:
         requirement: str,
         sim_type: str,
         params: Dict[str, Any],
-        document_context: Optional[str] = None
+        document_context: Optional[str] = None,
+        agent_profiles: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
-        Generate a complete survey using LLM.
+        Generate an adaptive, agent-aware survey using LLM.
         
         Args:
             requirement: Natural language requirement
             sim_type: Type of simulation
             params: Survey parameters (agentCount, likertScale, etc.)
             document_context: Optional extracted text from uploaded documents
+            agent_profiles: Optional list of agent profiles untuk generate pertanyaan
+                           yang relevan dengan karakteristik responden aktual
             
         Returns:
             Complete survey configuration
         """
         scale = params.get('likertScale', 5)
-        agent_count = params.get('agentCount', 500)
+        agent_count = len(agent_profiles) if agent_profiles else params.get('agentCount', 500)
         sim_prompt = SIM_TYPE_PROMPTS.get(sim_type, SIM_TYPE_PROMPTS["custom"])
 
         likert_labels_5 = "1=Sangat Tidak Setuju, 2=Tidak Setuju, 3=Netral, 4=Setuju, 5=Sangat Setuju"
@@ -74,12 +144,16 @@ class SurveyGenerator:
         doc_section = ""
         if document_context:
             doc_section = f"\n\nDokumen referensi:\n{document_context[:3000]}"
+        
+        profile_section = ""
+        if agent_profiles:
+            profile_section = f"\n\nProfil responden:\n{summarize_profiles(agent_profiles)}"
 
         system_prompt = f"""Anda adalah ahli metodologi survei akademik. Buat rancangan survei berdasarkan spesifikasi berikut.
 
 {sim_prompt}
 Skala Likert: {scale}-point ({labels})
-Target responden: {agent_count} partisipan{doc_section}
+Target responden: {agent_count} partisipan{doc_section}{profile_section}
 
 Kebutuhan riset: {requirement}
 
@@ -116,7 +190,7 @@ Output JSON WAJIB dengan struktur berikut (jangan tambah field lain di luar stru
   "hypotheses": ["Hipotesis 1", "Hipotesis 2", "Hipotesis 3"]
 }}
 
-PEDOMAN:
+PEDOMAN UMUM:
 1. Minimal 3 section, 10 pertanyaan inti
 2. CAMPURAN tipe: likert (60%), mcq (20%), open-ended (20%)
 3. Setiap section punya 3-5 pertanyaan
@@ -124,7 +198,19 @@ PEDOMAN:
 5. Pertanyaan open WAJIB punya field "max_length" (number)
 6. Gunakan bahasa Indonesia yang baik dan benar
 7. PENTING: Setiap pertanyaan WAJIB menyebut topik riset secara eksplisit, jangan pakai kata "ini", "tersebut", atau "topik ini". Contoh: alih-alih "Apakah Anda setuju dengan kebijakan ini?", tulis "Apakah Anda setuju dengan kebijakan kenaikan PPN 12%?"
-8. Ikuti kaidah metodologi survei akademik"""
+
+PEDOMAN AGENT-AWARE (WAJIB):
+8. Profil responden di atas adalah AGEN SIMULASI nyata yang akan menjawab. Setiap pertanyaan harus MEMANGGIL latar belakang spesifik mereka.
+9. Contoh pertanyaan agent-aware yang BAGUS:
+   - "Sebagai seorang {profesi}, bagaimana pendapat Anda tentang kebijakan X?"
+   - "Dengan latar belakang pendidikan {pendidikan}, apakah Anda merasa kualifikasi Anda memadai untuk menilai isu Y?"
+   - "Tipe kepribadian {MBTI} Anda cenderung {ciri}. Apakah ini mempengaruhi cara Anda memandang topik Z?"
+   - "Anda bekerja sebagai {pekerjaan} dan memiliki gaya kognitif {gaya}. Bagaimana perspektif unik ini membentuk opini Anda tentang {topik}?"
+10. Contoh pertanyaan yang BURUK (JANGAN):
+    - "Apakah Anda setuju dengan pernyataan di atas?" (terlalu generik)
+    - "Seberapa penting isu ini bagi Anda?" (tidak menginterogasi)
+11. MINIMAL 70% pertanyaan harus menyebut profesi, latar belakang, atau karakteristik spesifik dari profil responden yang diberikan.
+12. Tujuan: MENGINTEROGASI agen, bukan sekedar mengumpulkan data. Pertanyaan harus menggali RASIONAL di balik opini agen, bukan sekedar mengukur tingkat persetujuan."""
 
         try:
             llm = LLMClient(temperature=0.7, max_tokens=4096)

@@ -55,7 +55,6 @@
           :projectData="projectData"
           :graphData="graphData"
           :systemLogs="systemLogs"
-          :initialRounds="pendingUpload.surveyParams.maxRounds"
           @go-back="handleGoBack"
           @next-step="handleNextStep"
           @add-log="addLog"
