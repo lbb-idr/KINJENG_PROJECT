@@ -43,6 +43,8 @@ Alur kerjanya: **unggah data → AI menciptakan masyarakat digital → agen beri
 
 KINJENG_PROJECT menggunakan **[MiroFish](https://github.com/666ghj/MiroFish)** sebagai mesin simulasi multi-agent. MiroFish merupakan platform simulasi sosial berbasis AI yang telah mature dan didukung oleh **[OASIS](https://github.com/camel-ai/oasis)** dari CAMEL-AI untuk simulasi interaksi agen di platform sosial.
 
+Pembangunan identitas agen dan cara agen merespons menggunakan logika dari **[TribeV2](https://github.com/facebookresearch/tribev2.git)** milik Meta (Facebook Research). TribeV2 menyediakan kerangka kerja untuk membangun agen dengan kepribadian, ingatan, dan pola pengambilan keputusan yang realistis.
+
 ## Development
 
 ```bash
