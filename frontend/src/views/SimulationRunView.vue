@@ -44,6 +44,7 @@
           :loading="graphLoading"
           :currentPhase="3"
           :isSimulating="isSimulating"
+          :activeAgentIds="activeAgentIds"
           @refresh="refreshGraph"
           @toggle-maximize="toggleMaximize('graph')"
         />
@@ -62,6 +63,7 @@
           @next-step="handleNextStep"
           @add-log="addLog"
           @update-status="updateStatus"
+          @update-active-agents="activeAgentIds = $event"
         />
       </div>
     </main>
@@ -103,6 +105,7 @@ const graphData = ref(null)
 const graphLoading = ref(false)
 const systemLogs = ref([])
 const currentStatus = ref('processing') // processing | completed | error
+const activeAgentIds = ref([])
 
 // --- Session Persistence ---
 function saveSession() {

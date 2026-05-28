@@ -123,16 +123,47 @@
         </div>
       </div>
       
+      <!-- Platform Filter Tabs -->
+      <div class="platform-tabs">
+        <button
+          class="tab-btn"
+          :class="{ active: activePlatform === 'all' }"
+          @click="activePlatform = 'all'"
+        >
+          Semua
+          <span class="tab-count">{{ allActions.length }}</span>
+        </button>
+        <button
+          class="tab-btn twitter-tab"
+          :class="{ active: activePlatform === 'twitter' }"
+          @click="activePlatform = 'twitter'"
+        >
+          <svg class="tab-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          Info Plaza
+          <span class="tab-count">{{ twitterActionsCount }}</span>
+        </button>
+        <button
+          class="tab-btn reddit-tab"
+          :class="{ active: activePlatform === 'reddit' }"
+          @click="activePlatform = 'reddit'"
+        >
+          <svg class="tab-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          Topic Community
+          <span class="tab-count">{{ redditActionsCount }}</span>
+        </button>
+      </div>
+
       <!-- Timeline Feed -->
       <div class="timeline-feed">
         <div class="timeline-axis"></div>
         
         <TransitionGroup name="timeline-item">
           <div 
-            v-for="action in chronologicalActions" 
+            v-for="action in filteredActions" 
             :key="action._uniqueId || action.id || `${action.timestamp}-${action.agent_id}`" 
             class="timeline-item"
-            :class="action.platform"
+            :class="[action.platform, { 'is-reply': action._depth > 0 }]"
+            :style="action._depth > 0 ? { '--reply-depth': action._depth + '' } : {}"
           >
             <div class="timeline-marker">
               <div class="marker-dot"></div>
@@ -311,7 +342,7 @@ const props = defineProps({
   systemLogs: Array
 })
 
-const emit = defineEmits(['go-back', 'next-step', 'add-log', 'update-status'])
+const emit = defineEmits(['go-back', 'next-step', 'add-log', 'update-status', 'update-active-agents'])
 
 const router = useRouter()
 
@@ -325,6 +356,49 @@ const runStatus = ref({})
 const allActions = ref([]) // 所有动作（增量累积）
 const actionIds = ref(new Set()) // 用于去重的动作ID集合
 const scrollContainer = ref(null)
+
+// Platform filter
+const activePlatform = ref('all')
+
+// Agent IDs from last N actions for graph highlight
+const RECENT_ACTION_WINDOW = 20
+const recentActiveAgentIds = computed(() => {
+  const recent = allActions.value.slice(-RECENT_ACTION_WINDOW)
+  const ids = new Set(recent.map(a => a.agent_id).filter(Boolean))
+  return [...ids]
+})
+
+watch(recentActiveAgentIds, (ids) => {
+  emit('update-active-agents', ids)
+}, { immediate: true })
+
+// Filtered + threaded actions
+const filteredActions = computed(() => {
+  let actions = allActions.value
+  if (activePlatform.value !== 'all') {
+    actions = actions.filter(a => a.platform === activePlatform.value)
+  }
+  
+  // Threading: detect reply chains via post_id in comments
+  const postMap = {}
+  actions.forEach(a => {
+    const pid = a.action_args?.post_id
+    if (pid && (a.action_type === 'CREATE_POST' || a.action_type === 'QUOTE_POST')) {
+      postMap[pid] = a
+    }
+  })
+  
+  return actions.map(a => {
+    let depth = 0
+    if (a.action_type === 'CREATE_COMMENT') {
+      const parentPid = a.action_args?.post_id
+      if (parentPid && postMap[parentPid]) {
+        depth = 1
+      }
+    }
+    return { ...a, _depth: depth }
+  })
+})
 
 // Computed
 // 按时间顺序显示动作（最新的在最后面，即底部）
@@ -953,6 +1027,72 @@ onUnmounted(() => {
 .breakdown-divider { color: #DDD; }
 .breakdown-item.twitter { color: #000; }
 .breakdown-item.reddit { color: #000; }
+
+/* --- Platform Tabs --- */
+.platform-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-color, #333);
+  margin: 0 16px;
+  padding: 0;
+}
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.tab-btn:hover { color: var(--text-primary, #eee); }
+.tab-btn.active {
+  color: var(--text-primary, #eee);
+  border-bottom-color: var(--accent-primary, #FF6A33);
+}
+.tab-btn .tab-icon { opacity: 0.6; }
+.tab-btn.active .tab-icon { opacity: 1; }
+.tab-count {
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  background: var(--bg-secondary, #1a1a1a);
+  border-radius: 0;
+  color: var(--text-tertiary, #666);
+}
+.tab-btn.active .tab-count {
+  background: var(--accent-primary, #FF6A33);
+  color: #fff;
+}
+
+/* --- Threaded Reply Indent --- */
+.timeline-item.is-reply {
+  margin-left: 32px;
+  padding-left: 16px;
+  border-left: 2px solid var(--border-color, #333);
+  position: relative;
+}
+.timeline-item.is-reply::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: -2px;
+  width: 14px;
+  height: 2px;
+  background: var(--border-color, #333);
+}
+.timeline-item.is-reply .timeline-marker .marker-dot {
+  width: 6px;
+  height: 6px;
+  opacity: 0.5;
+}
 
 /* --- Timeline Feed --- */
 .timeline-feed {

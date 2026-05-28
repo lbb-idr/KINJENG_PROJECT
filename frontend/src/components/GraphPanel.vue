@@ -243,7 +243,11 @@ const props = defineProps({
   graphData: Object,
   loading: Boolean,
   currentPhase: Number,
-  isSimulating: Boolean
+  isSimulating: Boolean,
+  activeAgentIds: {
+    type: Array,
+    default: () => []
+  }
 })
 
 const emit = defineEmits(['refresh', 'toggle-maximize'])
@@ -324,6 +328,7 @@ const closeDetailPanel = () => {
 let currentSimulation = null
 let linkLabelsRef = null
 let linkLabelBgRef = null
+let nodeCircles = null // ref to D3 node circles for highlighting
 
 const renderGraph = () => {
   if (!graphSvg.value || !props.graphData) return
@@ -659,6 +664,8 @@ const renderGraph = () => {
     .attr('stroke', '#fff')
     .attr('stroke-width', 2.5)
     .style('cursor', 'pointer')
+    // Store agent index for highlight matching
+    .attr('data-agent-idx', (d, i) => i)
     .call(d3.drag()
       .on('start', (event, d) => {
         // 只记录位置，不重启仿真（区分点击和拖拽）
@@ -724,6 +731,9 @@ const renderGraph = () => {
         d3.select(event.target).attr('stroke', '#fff').attr('stroke-width', 2.5)
       }
     })
+
+  // Store reference for highlight updates
+  nodeCircles = node
 
   // Node Labels
   const nodeLabels = nodeGroup.selectAll('text')
@@ -796,6 +806,15 @@ watch(showEdgeLabels, (newVal) => {
     linkLabelBgRef.style('display', newVal ? 'block' : 'none')
   }
 })
+
+// Highlight agents on graph nodes
+watch(() => props.activeAgentIds, (ids) => {
+  if (!nodeCircles) return
+  nodeCircles
+    .attr('stroke', (d, i) => ids.includes(i) ? '#FF6A33' : '#fff')
+    .attr('stroke-width', (d, i) => ids.includes(i) ? 4 : 2.5)
+    .attr('r', (d, i) => ids.includes(i) ? 13 : 10)
+}, { deep: true })
 
 const handleResize = () => {
   nextTick(renderGraph)
