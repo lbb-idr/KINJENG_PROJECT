@@ -120,7 +120,14 @@ def create_app(config_class=Config):
     # 健康检查
     @app.route('/health')
     def health():
-        return {'status': 'ok', 'service': 'KINJENG_PROJECT Backend'}
+        deps = {}
+        try:
+            import weasyprint; deps['weasyprint'] = weasyprint.__version__
+        except Exception: deps['weasyprint'] = None
+        try:
+            import markdown; deps['markdown'] = markdown.__version__
+        except Exception: deps['markdown'] = None
+        return {'status': 'ok', 'service': 'KINJENG_PROJECT Backend', 'dependencies': deps}
     
     # Metrics endpoint
     @app.route('/api/metrics')
