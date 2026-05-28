@@ -71,22 +71,24 @@
       </div>
     </div>
   </Transition>
+
+  <!-- Toast -->
+  <Transition name="toast-fade">
+    <div v-if="toast" class="splash-toast">{{ toast }}</div>
+  </Transition>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 
-const show = ref(false)
-
-onMounted(() => {
-  if (!sessionStorage.getItem('kinjeng_splash_dismissed')) {
-    show.value = true
-  }
-})
+const show = ref(!sessionStorage.getItem('kinjeng_splash_dismissed'))
+const toast = ref('')
 
 function dismiss() {
   sessionStorage.setItem('kinjeng_splash_dismissed', 'true')
   show.value = false
+  toast.value = 'Selamat Datang di Kinjeng Project!'
+  setTimeout(() => { toast.value = '' }, 3000)
 }
 </script>
 
@@ -315,4 +317,24 @@ function dismiss() {
 .splash-btn:hover .splash-btn-arrow {
   transform: translateX(4px);
 }
+
+.splash-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  background: #070707;
+  border: 1px solid #FF6A33;
+  color: #fff;
+  padding: 12px 24px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+  box-shadow: 0 0 20px rgba(255,106,51,0.1);
+  pointer-events: none;
+}
+.toast-fade-enter-active { transition: all 0.4s ease; }
+.toast-fade-leave-active { transition: all 0.3s ease; }
+.toast-fade-enter-from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+.toast-fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(-10px); }
 </style>
