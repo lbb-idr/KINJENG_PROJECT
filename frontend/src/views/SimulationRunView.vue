@@ -279,18 +279,22 @@ const loadSimulationData = async () => {
         addLog(t('log.timeConfigFetchFailed', { minutes: minutesPerRound.value }))
       }
       
-      // 获取 project 信息
+      // 获取 project 信息 (untuk metadata, graph_id ambil langsung dari simData)
       if (simData.project_id) {
         const projRes = await getProject(simData.project_id)
         if (projRes.success && projRes.data) {
           projectData.value = projRes.data
           addLog(t('log.projectLoadSuccess', { id: projRes.data.project_id }))
-          
-          // 获取 graph 数据
-          if (projRes.data.graph_id) {
-            await loadGraph(projRes.data.graph_id)
-          }
         }
+      }
+      
+      // Graph ID sudah ada di SimulationState — pakai langsung
+      const graphId = simData.graph_id || projectData.value?.graph_id
+      if (graphId) {
+        await loadGraph(graphId)
+        addLog(`Graph data loaded from graph_id: ${graphId}`)
+      } else {
+        addLog('⚠️ graph_id not found in simulation state or project')
       }
     } else {
       addLog(t('log.loadSimDataFailed', { error: simRes.error || t('common.unknownError') }))
@@ -386,7 +390,7 @@ watch(() => projectData.value?.graph_id, (newId) => {
 
 let restoring = false
 
-onMounted(() => {
+onMounted(async () => {
   // Coba restore dari sessionStorage
   if (restoreSession()) {
     addLog('🔄 Session dipulihkan')
@@ -398,7 +402,7 @@ onMounted(() => {
     if (maxRounds.value) {
       addLog(t('log.customRounds', { rounds: maxRounds.value }))
     }
-    loadSimulationData()
+    await loadSimulationData()
   }
 
   // Selalu load graph data (even saat session restore)
