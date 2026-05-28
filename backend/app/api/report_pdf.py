@@ -3,7 +3,6 @@ PDF Report Generation API routes
 """
 
 import os
-import uuid
 import traceback
 from flask import request, jsonify, send_file
 
@@ -78,84 +77,11 @@ def generate_survey_report(project_id: str):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@survey_bp.route('/report/test', methods=['GET'])
-def test_pdf_generation():
-    """Test endpoint: generates a sample PDF and returns it directly."""
-    try:
-        import io, json, random, os
-        from datetime import datetime
-        from ..config import Config
-        from ..services.survey_statistics import SurveyStatistics
-
-        project_id = f"test_{uuid.uuid4().hex[:8]}"
-        
-        fake_results = {
-            "project_id": project_id,
-            "total_agents": 20,
-            "total_questions": 3,
-            "likert_scale": 5,
-            "results": []
-        }
-        for i in range(20):
-            agent = {
-                "agent_id": f"agent_{i}",
-                "persona": {
-                    "age": random.choice([20,25,30,35,40]),
-                    "occupation": random.choice(["Mahasiswa","Guru","Dokter","Insinyur"]),
-                    "personality": random.choice(["Openness","Conscientiousness","Extraversion"]),
-                    "gender": random.choice(["Laki-laki","Perempuan"])
-                },
-                "responses": [
-                    {"question_id": "q01", "question": "Seberapa sering Anda menggunakan media sosial?", "answer": str(random.randint(1,5)), "likert_score": random.randint(1,5)},
-                    {"question_id": "q02", "question": "Apakah media sosial mempengaruhi opini politik Anda?", "answer": str(random.randint(1,5)), "likert_score": random.randint(1,5)},
-                    {"question_id": "q03", "question": "Seberapa percaya Anda dengan berita di media sosial?", "answer": str(random.randint(1,5)), "likert_score": random.randint(1,5)}
-                ]
-            }
-            fake_results["results"].append(agent)
-
-        statistics = SurveyStatistics.compute_all(fake_results)
-        
-        survey_config = {
-            "title": "TEST: Dampak Media Sosial",
-            "description": "PDF generation test",
-            "sim_type": "academic",
-            "sections": [
-                {"id": "s1", "title": "Penggunaan Media Sosial", "questions": [
-                    {"id": "q01", "text": "Seberapa sering Anda menggunakan media sosial?", "type": "likert", "scale": [1,2,3,4,5], "labels": ["Tidak pernah","Jarang","Kadang","Sering","Sangat sering"]},
-                    {"id": "q02", "text": "Apakah media sosial mempengaruhi opini politik Anda?", "type": "likert", "scale": [1,2,3,4,5], "labels": ["Sangat tidak","Tidak","Netral","Ya","Sangat ya"]},
-                    {"id": "q03", "text": "Seberapa percaya Anda dengan berita di media sosial?", "type": "likert", "scale": [1,2,3,4,5], "labels": ["Tidak percaya","Kurang","Cukup","Percaya","Sangat percaya"]}
-                ]}
-            ],
-            "hypotheses": ["Media sosial meningkatkan polarisasi politik"],
-            "demographics": [{"key": "Usia", "options": ["20-25","26-35","36-45"]}]
-        }
-        
-        filepath = pdf_renderer.generate_pdf(
-            project_id=project_id,
-            results=fake_results,
-            statistics=statistics,
-            survey_config=survey_config,
-            report_data=None,
-            prediction_report=None
-        )
-        
-        return send_file(
-            filepath,
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=f"{project_id}.pdf"
-        )
-    except Exception as e:
-        logger.error(f"Test PDF failed: {e}\n{traceback.format_exc()}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
 @survey_bp.route('/report/<project_id>', methods=['GET'])
 def download_survey_report(project_id: str):
     """Download a generated PDF report."""
     try:
         path = pdf_renderer.get_report_path(project_id)
-        logger.info(f"Download PDF request for {project_id}, path={path}")
         if path is None:
             return jsonify({"success": False, "error": "Report not found. Generate it first."}), 404
 
