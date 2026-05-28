@@ -1,20 +1,5 @@
 <template>
   <div class="home-container">
-    <!-- Welcome Overlay -->
-    <Transition name="welcome-fade">
-      <div v-if="showWelcome" class="welcome-overlay" @click="startWelcomeClick">
-        <div class="welcome-center">
-          <img :src="logoImg" alt="KINJENG" class="welcome-logo" :class="{ 'logo-flying': isLogoFlying, 'logo-expand': isLogoExpanding }" @click.stop="handleLogoClick" />
-          <h1 class="welcome-title">KINJENG<span class="welcome-accent">_PROJECT</span></h1>
-          <p class="welcome-subtitle">Multi-Agent Social Simulation Platform</p>
-          <button class="welcome-btn" @click.stop="startWelcomeClick">
-            🚀 Mulai
-          </button>
-          <p class="welcome-hint">Klik logo atau tombol Mulai untuk memulai</p>
-        </div>
-      </div>
-    </Transition>
-
     <NavBar />
 
     <div class="main-content">
@@ -229,38 +214,7 @@ function goToChooseSimulation() {
   router.push({ name: 'SimulationType' })
 }
 
-// Welcome Screen
-import logoImg from '../assets/logo/KINJENG_Project_logo_compressed.jpeg'
-const showWelcome = ref(true)
-const isLogoFlying = ref(false)
-const isLogoExpanding = ref(false)
-const welcomeClickable = ref(true)
-
-function handleLogoClick() {
-  if (!welcomeClickable.value) return
-  isLogoFlying.value = true
-  welcomeClickable.value = false
-  setTimeout(() => {
-    isLogoFlying.value = false
-    welcomeClickable.value = true
-  }, 1200)
-}
-
-function startWelcomeClick() {
-  if (!welcomeClickable.value) return
-  welcomeClickable.value = false
-  isLogoExpanding.value = true
-  setTimeout(() => {
-    showWelcome.value = false
-    isLogoExpanding.value = false
-    welcomeClickable.value = true
-  }, 800)
-}
-
 watch(() => route.query, (query) => {
-  if (query.skipWelcome === 'true') {
-    showWelcome.value = false
-  }
   if (query.type) {
     simulationType.value = query.type
     params.agentCount = Number(query.agentCount) || 500
@@ -676,116 +630,6 @@ const startSimulation = async () => {
   border: 1px solid var(--border-color);
   font-family: var(--font-mono);
   color: var(--text-secondary);
-}
-
-/* Welcome Overlay */
-.welcome-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: var(--bg-primary, #000);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.welcome-center {
-  text-align: center;
-  animation: welcomeFadeIn 1s ease-out;
-}
-@keyframes welcomeFadeIn {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.welcome-logo {
-  width: 160px;
-  height: auto;
-  margin-bottom: 24px;
-  cursor: pointer;
-  transition: all 0.3s;
-  border-radius: 12px;
-  animation: logoFloat 4s ease-in-out infinite;
-}
-@keyframes logoFloat {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-12px) rotate(-2deg); }
-  50% { transform: translateY(-6px) rotate(1deg); }
-  75% { transform: translateY(-18px) rotate(-1deg); }
-}
-.welcome-logo.logo-flying {
-  animation: logoFlyOut 1.2s ease-in-out forwards;
-}
-@keyframes logoFlyOut {
-  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  30% { transform: translate(100px, -150px) scale(1.3) rotate(15deg); }
-  60% { transform: translate(-80px, 100px) scale(0.8) rotate(-20deg); }
-  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
-}
-.welcome-logo.logo-expand {
-  animation: logoExpand 0.8s ease-in-out forwards;
-}
-@keyframes logoExpand {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(50); opacity: 0.3; }
-}
-.welcome-title {
-  font-size: 2.5rem;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  margin: 0 0 8px;
-  letter-spacing: 2px;
-}
-.welcome-accent {
-  color: var(--accent-primary, #FF4500);
-}
-.welcome-subtitle {
-  font-size: 0.9rem;
-  color: var(--text-secondary, #888);
-  margin: 0 0 32px;
-  font-family: var(--font-mono);
-}
-.welcome-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 36px;
-  background: var(--accent-primary, #FF4500);
-  color: #fff;
-  border: none;
-  font-family: var(--font-mono);
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s;
-  letter-spacing: 1px;
-}
-.welcome-btn:hover {
-  background: var(--black, #000);
-  transform: translateY(-2px);
-}
-.welcome-hint {
-  font-size: 0.7rem;
-  color: var(--text-tertiary, #555);
-  margin-top: 20px;
-  font-family: var(--font-mono);
-}
-.welcome-fade-enter-active,
-.welcome-fade-leave-active {
-  transition: opacity 0.5s ease;
-}
-.welcome-fade-enter-from,
-.welcome-fade-leave-to {
-  opacity: 0;
-}
-@media (min-width: 1200px) {
-  .welcome-logo { width: 220px; }
-  .welcome-title { font-size: 3rem; }
-}
-@media (max-width: 480px) {
-  .welcome-logo { width: 120px; }
-  .welcome-title { font-size: 1.6rem; }
-  .welcome-subtitle { font-size: 0.75rem; }
-  .welcome-btn { padding: 12px 24px; font-size: 0.85rem; }
 }
 
 @media (max-width: 700px) {
