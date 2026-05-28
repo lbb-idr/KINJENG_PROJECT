@@ -233,7 +233,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import NavBar from '../components/NavBar.vue'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
@@ -293,15 +293,9 @@ function goToChooseSimulation() {
   router.push({ name: 'SimulationType' })
 }
 
-// Welcome Splash
-const showWelcomeSplash = ref(true)
+// Welcome Splash — hanya hilang ketika user klik tombol "MULAI EKSPLORASI DASBOR"
+const showWelcomeSplash = ref(sessionStorage.getItem('kinjeng_splash_dismissed') !== 'true')
 const toastMessage = ref('')
-
-onMounted(() => {
-  if (sessionStorage.getItem('kinjeng_splash_dismissed') === 'true') {
-    showWelcomeSplash.value = false
-  }
-})
 
 function dismissSplash() {
   sessionStorage.setItem('kinjeng_splash_dismissed', 'true')
