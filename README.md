@@ -313,7 +313,9 @@ npm run dev
 
 ## Deploy
 
-Deployed on Railway: `https://mirofish-production-c68d.up.railway.app`
+---
+
+*Deploy info: Railway — internal only*
 
 ---
 
