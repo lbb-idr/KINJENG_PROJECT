@@ -80,7 +80,7 @@ def generate_survey_report(project_id: str):
 
 @survey_bp.route('/report/test', methods=['GET'])
 def test_pdf_generation():
-    """Test endpoint: generates a sample PDF to verify weasyprint works."""
+    """Test endpoint: generates a sample PDF and returns it directly."""
     try:
         import io, json, random, os
         from datetime import datetime
@@ -89,7 +89,6 @@ def test_pdf_generation():
 
         project_id = f"test_{uuid.uuid4().hex[:8]}"
         
-        # Create minimal fake survey results
         fake_results = {
             "project_id": project_id,
             "total_agents": 20,
@@ -140,15 +139,12 @@ def test_pdf_generation():
             prediction_report=None
         )
         
-        return jsonify({
-            "success": True,
-            "data": {
-                "project_id": project_id,
-                "filepath": filepath,
-                "filename": f"{project_id}.pdf",
-                "message": "PDF generated successfully! Download at: GET /api/survey/report/" + project_id
-            }
-        })
+        return send_file(
+            filepath,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"{project_id}.pdf"
+        )
     except Exception as e:
         logger.error(f"Test PDF failed: {e}\n{traceback.format_exc()}")
         return jsonify({"success": False, "error": str(e)}), 500
@@ -159,6 +155,7 @@ def download_survey_report(project_id: str):
     """Download a generated PDF report."""
     try:
         path = pdf_renderer.get_report_path(project_id)
+        logger.info(f"Download PDF request for {project_id}, path={path}")
         if path is None:
             return jsonify({"success": False, "error": "Report not found. Generate it first."}), 404
 
