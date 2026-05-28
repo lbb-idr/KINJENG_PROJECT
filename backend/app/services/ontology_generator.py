@@ -104,8 +104,7 @@ A. **兜底类型（必须包含，放在列表最后2个）**：
 
 B. **具体类型（8个，根据文本内容设计）**：
    - 针对文本中出现的主要角色，设计更具体的类型
-   - 例如：如果文本涉及学术事件，可以有 `Student`, `Professor`, `University`
-   - 例如：如果文本涉及商业事件，可以有 `Company`, `CEO`, `Employee`
+   - 不要使用下面示例中的类型名称，而是从文档中提取真正相关的类型
 
 **为什么需要兜底类型**：
 - 文本中会出现各种人物，如"中小学教师"、"路人甲"、"某位网友"
@@ -113,7 +112,7 @@ B. **具体类型（8个，根据文本内容设计）**：
 - 同理，小型组织、临时团体等应该归入 `Organization`
 
 **具体类型的设计原则**：
-- 从文本中识别出高频出现或关键的角色类型
+- **WAJIB: 从上传的文档内容中提取实体类型，不要使用预定义的示例**
 - 每个具体类型应该有明确的边界，避免重叠
 - description 必须清晰说明这个类型和兜底类型的区别
 
@@ -128,48 +127,6 @@ B. **具体类型（8个，根据文本内容设计）**：
 - 每个实体类型1-3个关键属性
 - **注意**：属性名不能使用 `name`、`uuid`、`group_id`、`created_at`、`summary`（这些是系统保留字）
 - 推荐使用：`full_name`, `title`, `role`, `position`, `location`, `description` 等
-
-## 实体类型参考
-
-**个人类（具体）**：
-- Student: 学生
-- Professor: 教授/学者
-- Journalist: 记者
-- Celebrity: 明星/网红
-- Executive: 高管
-- Official: 政府官员
-- Lawyer: 律师
-- Doctor: 医生
-
-**个人类（兜底）**：
-- Person: 任何自然人（不属于上述具体类型时使用）
-
-**组织类（具体）**：
-- University: 高校
-- Company: 公司企业
-- GovernmentAgency: 政府机构
-- MediaOutlet: 媒体机构
-- Hospital: 医院
-- School: 中小学
-- NGO: 非政府组织
-
-**组织类（兜底）**：
-- Organization: 任何组织机构（不属于上述具体类型时使用）
-
-## 关系类型参考
-
-- WORKS_FOR: 工作于
-- STUDIES_AT: 就读于
-- AFFILIATED_WITH: 隶属于
-- REPRESENTS: 代表
-- REGULATES: 监管
-- REPORTS_ON: 报道
-- COMMENTS_ON: 评论
-- RESPONDS_TO: 回应
-- SUPPORTS: 支持
-- OPPOSES: 反对
-- COLLABORATES_WITH: 合作
-- COMPETES_WITH: 竞争
 """
 
 
@@ -219,7 +176,7 @@ class OntologyGenerator:
         # 调用LLM
         result = self.llm_client.chat_json(
             messages=messages,
-            temperature=0.3,
+            temperature=0.7,
             max_tokens=4096
         )
         
@@ -295,7 +252,7 @@ Berdasarkan dokumen dan tipe simulasi di atas, buat entity types dan edge types 
 **Aturan Wajib**:
 1. Output tepat 10 entity types
 2. 2 terakhir = Person (tenggat individu) dan Organization (tenggat organisasi)
-3. 8 pertama spesifik dari konten + tipe simulasi
+3. 8 pertama spesifik dari konten + tipe simulasi — **WAJIB BACA DOKUMEN, JANGAN GUNAKAN TIPE DEFAULT**
 4. Semua entity harus bisa "bersuara" di media sosial (bukan konsep abstrak)
 5. Hindari attribute name `name`, `uuid`, `group_id` — pakai `full_name`, `org_name`, dll
 """

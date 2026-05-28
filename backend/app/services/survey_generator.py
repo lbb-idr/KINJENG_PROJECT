@@ -202,10 +202,10 @@ PEDOMAN UMUM:
 PEDOMAN AGENT-AWARE (WAJIB):
 8. Profil responden di atas adalah AGEN SIMULASI nyata yang akan menjawab. Setiap pertanyaan harus MEMANGGIL latar belakang spesifik mereka.
 9. Contoh pertanyaan agent-aware yang BAGUS:
-   - "Sebagai seorang {profesi}, bagaimana pendapat Anda tentang kebijakan X?"
-   - "Dengan latar belakang pendidikan {pendidikan}, apakah Anda merasa kualifikasi Anda memadai untuk menilai isu Y?"
-   - "Tipe kepribadian {MBTI} Anda cenderung {ciri}. Apakah ini mempengaruhi cara Anda memandang topik Z?"
-   - "Anda bekerja sebagai {pekerjaan} dan memiliki gaya kognitif {gaya}. Bagaimana perspektif unik ini membentuk opini Anda tentang {topik}?"
+   - "Sebagai seorang {{profesi}}, bagaimana pendapat Anda tentang kebijakan X?"
+   - "Dengan latar belakang pendidikan {{pendidikan}}, apakah Anda merasa kualifikasi Anda memadai untuk menilai isu Y?"
+   - "Tipe kepribadian {{MBTI}} Anda cenderung {{ciri}}. Apakah ini mempengaruhi cara Anda memandang topik Z?"
+   - "Anda bekerja sebagai {{pekerjaan}} dan memiliki gaya kognitif {{gaya}}. Bagaimana perspektif unik ini membentuk opini Anda tentang {{topik}}?"
 10. Contoh pertanyaan yang BURUK (JANGAN):
     - "Apakah Anda setuju dengan pernyataan di atas?" (terlalu generik)
     - "Seberapa penting isu ini bagi Anda?" (tidak menginterogasi)
@@ -331,9 +331,9 @@ Setiap pertanyaan harus:
 4. Menyebut latar belakang spesifik responden (pekerjaan, kepribadian, gaya kognitif)
 
 Contoh pertanyaan interrogasi yang BAGUS:
-- "Anda menjawab 'Setuju' pada kebijakan PPN 12%. Sebagai seorang {profesi}, bagaimana kebijakan ini secara langsung mempengaruhi pekerjaan Anda sehari-hari?"
+- "Anda menjawab 'Setuju' pada kebijakan PPN 12%. Sebagai seorang {{profesi}}, bagaimana kebijakan ini secara langsung mempengaruhi pekerjaan Anda sehari-hari?"
 - "Anda yang memiliki gaya kognitif analitis cenderung mendukung kebijakan ini. Apakah ada data atau bukti spesifik yang mendasari keyakinan Anda?"
-- "Jawaban Anda tentang isu X tampak bertentangan dengan profesi Anda sebagai {profesi}. Bisakah Anda menjelaskan?"
+- "Jawaban Anda tentang isu X tampak bertentangan dengan profesi Anda sebagai {{profesi}}. Bisakah Anda menjelaskan?"
 
 Output JSON ARRAY:
 [

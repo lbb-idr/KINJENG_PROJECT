@@ -1,0 +1,3 @@
+[08:39:31] WARNING: weasyprint not installed, debate PDF generation disabled
+[08:39:31] WARNING: weasyprint not installed, PDF generation disabled
+ * Debug mode: off

@@ -1,0 +1,1 @@
+﻿Workshop pengembangan aplikasi berbasis AI untuk deteksi dini bencana alam. Menggunakan machine learning untuk menganalisis data cuaca dan gempa.

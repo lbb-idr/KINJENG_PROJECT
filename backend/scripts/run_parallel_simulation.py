@@ -74,7 +74,7 @@ import signal
 import sqlite3
 import warnings
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Callable
 
 
 # 全局变量：用于信号处理

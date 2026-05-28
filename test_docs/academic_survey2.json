@@ -1,0 +1,158 @@
+﻿{
+  "data": {
+    "_agent_aware": false,
+    "_agent_count": 0,
+    "demographics": [
+      {
+        "id": "age",
+        "label": "Usia",
+        "required": true,
+        "type": "range"
+      }
+    ],
+    "description": "Survei ini bertujuan untuk mengumpulkan data tentang dampak kebijakan merdeka belajar terhadap mahasiswa dan dosen. Kebijakan merdeka belajar adalah salah satu inovasi pendidikan yang diharapkan dapat meningkatkan kualitas pendidikan di Indonesia. Dengan survei ini, kami berharap dapat memahami lebih baik tentang bagaimana kebijakan merdeka belajar mempengaruhi mahasiswa dan dosen.",
+    "generated_by": "llm",
+    "hypotheses": [
+      "Kebijakan merdeka belajar telah meningkatkan kualitas pendidikan di Indonesia.",
+      "Kebijakan merdeka belajar telah mempengaruhi cara mahasiswa belajar.",
+      "Kebijakan merdeka belajar telah mempengaruhi cara dosen mengembangkan materi kuliah."
+    ],
+    "introduction": "Selamat datang dalam survei tentang dampak kebijakan merdeka belajar terhadap mahasiswa dan dosen. Kami berharap Anda dapat memberikan jawaban yang jujur dan akurat tentang pengalaman Anda dengan kebijakan merdeka belajar. Survei ini terdiri dari beberapa bagian dan akan memakan waktu sekitar 15 menit untuk diselesaikan.",
+    "params": {
+      "agentCount": 5,
+      "likertScale": 5
+    },
+    "sections": [
+      {
+        "description": "Berikut beberapa pertanyaan tentang pengenalan Anda dengan kebijakan merdeka belajar.",
+        "id": "section_1",
+        "questions": [
+          {
+            "id": "q01",
+            "labels": [
+              "Sangat Tidak Setuju",
+              "Tidak Setuju",
+              "Netral",
+              "Setuju",
+              "Sangat Setuju"
+            ],
+            "scale": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "text": "Sebagai seorang mahasiswa, seberapa setuju Anda bahwa kebijakan merdeka belajar telah meningkatkan kualitas pendidikan di Indonesia?",
+            "type": "likert"
+          },
+          {
+            "id": "q02",
+            "options": [
+              "Ya",
+              "Tidak",
+              "Tidak yakin"
+            ],
+            "text": "Dengan latar belakang pendidikan Anda, apakah Anda merasa bahwa kebijakan merdeka belajar telah mempengaruhi cara Anda belajar?",
+            "type": "mcq"
+          },
+          {
+            "id": "q03",
+            "max_length": 200,
+            "text": "Sebagai seorang dosen, bagaimana Anda memandang dampak kebijakan merdeka belajar terhadap kualitas pendidikan di Indonesia?",
+            "type": "open-ended"
+          }
+        ],
+        "title": "Pengenalan Kebijakan Merdeka Belajar"
+      },
+      {
+        "description": "Berikut beberapa pertanyaan tentang dampak kebijakan merdeka belajar terhadap mahasiswa.",
+        "id": "section_2",
+        "questions": [
+          {
+            "id": "q04",
+            "labels": [
+              "Sangat Tidak Setuju",
+              "Tidak Setuju",
+              "Netral",
+              "Setuju",
+              "Sangat Setuju"
+            ],
+            "scale": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "text": "Sebagai seorang mahasiswa, seberapa setuju Anda bahwa kebijakan merdeka belajar telah meningkatkan kemampuan Anda untuk belajar secara mandiri?",
+            "type": "likert"
+          },
+          {
+            "id": "q05",
+            "options": [
+              "Ya",
+              "Tidak",
+              "Tidak yakin"
+            ],
+            "text": "Dengan latar belakang pendidikan Anda, apakah Anda merasa bahwa kebijakan merdeka belajar telah mempengaruhi cara Anda memilih mata kuliah?",
+            "type": "mcq"
+          },
+          {
+            "id": "q06",
+            "max_length": 200,
+            "text": "Sebagai seorang mahasiswa, bagaimana Anda memandang dampak kebijakan merdeka belajar terhadap kemampuan Anda untuk berpikir kritis?",
+            "type": "open-ended"
+          }
+        ],
+        "title": "Dampak Kebijakan Merdeka Belajar terhadap Mahasiswa"
+      },
+      {
+        "description": "Berikut beberapa pertanyaan tentang dampak kebijakan merdeka belajar terhadap dosen.",
+        "id": "section_3",
+        "questions": [
+          {
+            "id": "q07",
+            "labels": [
+              "Sangat Tidak Setuju",
+              "Tidak Setuju",
+              "Netral",
+              "Setuju",
+              "Sangat Setuju"
+            ],
+            "scale": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "text": "Sebagai seorang dosen, seberapa setuju Anda bahwa kebijakan merdeka belajar telah meningkatkan kualitas pengajaran di kelas?",
+            "type": "likert"
+          },
+          {
+            "id": "q08",
+            "options": [
+              "Ya",
+              "Tidak",
+              "Tidak yakin"
+            ],
+            "text": "Dengan latar belakang pendidikan Anda, apakah Anda merasa bahwa kebijakan merdeka belajar telah mempengaruhi cara Anda mengembangkan materi kuliah?",
+            "type": "mcq"
+          },
+          {
+            "id": "q09",
+            "max_length": 200,
+            "text": "Sebagai seorang dosen, bagaimana Anda memandang dampak kebijakan merdeka belajar terhadap kemampuan Anda untuk mengembangkan keterampilan mahasiswa?",
+            "type": "open-ended"
+          }
+        ],
+        "title": "Dampak Kebijakan Merdeka Belajar terhadap Dosen"
+      }
+    ],
+    "sim_type": "academic",
+    "title": "Survei Dampak Kebijakan Merdeka Belajar"
+  },
+  "success": true
+}
+
