@@ -12,11 +12,15 @@ from ..utils.logger import get_logger
 logger = get_logger('kinjeng.debate.pdf')
 
 try:
+    # Ensure GTK3 DLLs are on PATH (Windows)
+    gtk_path = r"C:\Program Files\GTK3-Runtime Win64\bin"
+    if os.path.isdir(gtk_path) and gtk_path not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = gtk_path + os.pathsep + os.environ.get("PATH", "")
     from weasyprint import HTML
     WEASYPRINT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     WEASYPRINT_AVAILABLE = False
-    logger.warning("weasyprint not installed, debate PDF generation disabled")
+    logger.warning("weasyprint not available, debate PDF generation disabled")
 
 REPORTS_DIR = os.path.join(Config.UPLOAD_FOLDER, 'debate_pdfs')
 

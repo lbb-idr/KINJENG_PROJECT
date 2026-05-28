@@ -853,14 +853,14 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,0));
+  background: linear-gradient(to bottom, var(--bg-card), transparent);
   pointer-events: none;
 }
 
 .panel-title {
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   pointer-events: auto;
 }
 

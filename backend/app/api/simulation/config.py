@@ -210,7 +210,6 @@ def create_simulation():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -487,7 +486,6 @@ def prepare_simulation():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -631,7 +629,6 @@ def get_simulation(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -660,7 +657,6 @@ def list_simulations():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -830,7 +826,6 @@ def get_simulation_history():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -866,7 +861,6 @@ def get_simulation_config(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -895,7 +889,6 @@ def download_simulation_config(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -1014,7 +1007,6 @@ def get_simulation_config_realtime(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -1067,5 +1059,4 @@ def download_simulation_script(script_name: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500

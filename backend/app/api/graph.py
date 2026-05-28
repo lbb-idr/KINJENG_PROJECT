@@ -254,7 +254,6 @@ def generate_ontology():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -529,7 +528,6 @@ def build_graph():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -594,7 +592,6 @@ def get_graph_data(graph_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -622,5 +619,4 @@ def delete_graph(graph_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500

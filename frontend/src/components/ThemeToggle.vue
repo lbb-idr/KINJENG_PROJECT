@@ -1,5 +1,5 @@
 <template>
-  <button class="theme-toggle" @click="toggleTheme" :title="$t('main.toggleTheme')">
+  <button class="theme-toggle" @click="toggleTheme" :title="('main.toggleTheme')">
     <span v-if="isDark">☀️</span>
     <span v-else>🌙</span>
   </button>
@@ -20,8 +20,8 @@ function toggleTheme() {
 <style scoped>
 .theme-toggle {
   background: none;
-  border: 1px solid rgba(255,255,255,0.3);
-  color: white;
+  border: 1px solid var(--navbar-text, rgba(255,255,255,0.3));
+  color: var(--navbar-text, white);
   width: 36px;
   height: 36px;
   display: flex;
@@ -33,7 +33,7 @@ function toggleTheme() {
 }
 
 .theme-toggle:hover {
-  border-color: white;
+  border-color: var(--navbar-text, white);
   background: rgba(255,255,255,0.1);
 }
 </style>

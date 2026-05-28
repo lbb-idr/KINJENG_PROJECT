@@ -59,9 +59,7 @@ class GraphInfo:
 class GraphBuilderService:
     """
     图谱构建服务
-    支持两种模式:
-      - local: JSON file + LLM entity extraction (default)
-      - zep: Zep Cloud API
+    支持 Hybrid 模式: Zep Cloud utama, fallback ke Local (JSON+LLM) otomatis
     """
     
     def __init__(self, api_key: Optional[str] = None, mode: Optional[str] = None):
@@ -69,14 +67,40 @@ class GraphBuilderService:
         self.api_key = api_key or Config.ZEP_API_KEY
         self.task_manager = TaskManager()
         self.logger = get_logger('kinjeng.graph_builder')
-        
-        if self.mode == 'local':
-            from .local_graph_store import LocalGraphStore
-            self.local = LocalGraphStore()
-        else:
-            if not self.api_key:
-                raise ValueError("ZEP_API_KEY 未配置")
-            self.client = _get_zep_client(self.api_key)
+
+        # Always init local store for fallback
+        from .local_graph_store import LocalGraphStore
+        self.local = LocalGraphStore()
+
+        # Init Zep client if key available
+        self.client = None
+        if self.api_key:
+            try:
+                self.client = _get_zep_client(self.api_key)
+            except Exception as e:
+                self.logger.warning(f"Zep client init gagal: {e}")
+
+        # Track whether we've fallen back
+        self._fallback_to_local = False
+
+    def _try_zep(self, label: str, fn: Callable) -> bool:
+        """Try Zep operation. On failure → switch to local mode permanently.
+        Returns True if Zep succeeded (or already local)."""
+        if self._fallback_to_local or self.mode == 'local':
+            return True
+        if not self.client:
+            self.logger.info(f"Zep client unavailable, fallback ke local ({label})")
+            self._fallback_to_local = True
+            self.mode = 'local'
+            return True
+        try:
+            fn()
+            return True
+        except Exception as e:
+            self.logger.warning(f"Zep '{label}' gagal: {e}. Fallback ke local.")
+            self._fallback_to_local = True
+            self.mode = 'local'
+            return False
     
     def build_graph_async(
         self,
@@ -152,6 +176,12 @@ class GraphBuilderService:
                 progress=10,
                 message=t('progress.graphCreated', graphId=graph_id)
             )
+
+            if self._fallback_to_local and self.mode == 'local':
+                self.task_manager.update_task(
+                    task_id,
+                    message="Zep Cloud tidak tersedia, fallback ke mode Local (LLM ekstraksi)"
+                )
             
             # 2. 设置本体
             self.set_ontology(graph_id, ontology)
@@ -195,24 +225,32 @@ class GraphBuilderService:
                         message=msg
                     )
                 )
-                self.task_manager.update_task(
-                    task_id,
-                    progress=60,
-                    message=t('progress.waitingZepProcess')
-                )
-                self._wait_for_episodes(
-                    episode_uuids,
-                    lambda msg, prog: self.task_manager.update_task(
+                if self._fallback_to_local:
+                    # Zep failed mid-way, switch to local progress
+                    self.task_manager.update_task(
                         task_id,
-                        progress=60 + int(prog * 0.3),
-                        message=msg
+                        progress=90,
+                        message=t('progress.fetchingGraphInfo')
                     )
-                )
-                self.task_manager.update_task(
-                    task_id,
-                    progress=90,
-                    message=t('progress.fetchingGraphInfo')
-                )
+                else:
+                    self.task_manager.update_task(
+                        task_id,
+                        progress=60,
+                        message=t('progress.waitingZepProcess')
+                    )
+                    self._wait_for_episodes(
+                        episode_uuids,
+                        lambda msg, prog: self.task_manager.update_task(
+                            task_id,
+                            progress=60 + int(prog * 0.3),
+                            message=msg
+                        )
+                    )
+                    self.task_manager.update_task(
+                        task_id,
+                        progress=90,
+                        message=t('progress.fetchingGraphInfo')
+                    )
             
             graph_info = self._get_graph_info(graph_id)
             
@@ -230,90 +268,88 @@ class GraphBuilderService:
     
     def create_graph(self, name: str) -> str:
         graph_id = f"kinjeng_{uuid.uuid4().hex[:16]}"
-        if self.mode == 'local':
-            self.local.create(graph_id, name, "KINJENG_PROJECT Social Simulation Graph")
-        else:
-            rate_limit()
+        self._try_zep("create_graph", lambda: (
+            rate_limit(),
             self.client.graph.create(
                 graph_id=graph_id,
                 name=name,
                 description="KINJENG_PROJECT Social Simulation Graph"
             )
+        ))
+        if self.mode == 'local':
+            self.local.create(graph_id, name, "KINJENG_PROJECT Social Simulation Graph")
         return graph_id
     
     def set_ontology(self, graph_id: str, ontology: Dict[str, Any]):
+        # Local mode → langsung
         if self.mode == 'local':
             self.local.set_ontology(graph_id, ontology)
             return
 
+        # Zep mode → build ontology classes, then try Zep
+        entity_types, edge_definitions = self._build_zep_ontology(ontology)
+
+        if entity_types or edge_definitions:
+            def _zep_set():
+                rate_limit()
+                self.client.graph.set_ontology(
+                    graph_ids=[graph_id],
+                    entities=entity_types if entity_types else None,
+                    edges=edge_definitions if edge_definitions else None,
+                )
+
+            ok = self._try_zep("set_ontology", _zep_set)
+            if not ok:
+                self.local.set_ontology(graph_id, ontology)
+
+    def _build_zep_ontology(self, ontology: Dict[str, Any]) -> tuple:
+        """Convert ontology dict to Zep SDK classes. Returns (entity_types, edge_definitions)."""
         import warnings
         from typing import Optional
         from pydantic import Field
         from zep_cloud import EntityEdgeSourceTarget
         from zep_cloud.external_clients.ontology import EntityModel, EntityText, EdgeModel
-        
-        # 抑制 Pydantic v2 关于 Field(default=None) 的警告
-        # 这是 Zep SDK 要求的用法，警告来自动态类创建，可以安全忽略
+
         warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
-        
-        # Zep 保留名称，不能作为属性名
+
         RESERVED_NAMES = {'uuid', 'name', 'group_id', 'name_embedding', 'summary', 'created_at'}
-        
+
         def safe_attr_name(attr_name: str) -> str:
-            """将保留名称转换为安全名称"""
             if attr_name.lower() in RESERVED_NAMES:
                 return f"entity_{attr_name}"
             return attr_name
-        
-        # 动态创建实体类型
+
         entity_types = {}
         for entity_def in ontology.get("entity_types", []):
             name = entity_def["name"]
             description = entity_def.get("description", f"A {name} entity.")
-            
-            # 创建属性字典和类型注解（Pydantic v2 需要）
             attrs = {"__doc__": description}
             annotations = {}
-            
             for attr_def in entity_def.get("attributes", []):
-                attr_name = safe_attr_name(attr_def["name"])  # 使用安全名称
+                attr_name = safe_attr_name(attr_def["name"])
                 attr_desc = attr_def.get("description", attr_name)
-                # Zep API 需要 Field 的 description，这是必需的
                 attrs[attr_name] = Field(description=attr_desc, default=None)
-                annotations[attr_name] = Optional[EntityText]  # 类型注解
-            
+                annotations[attr_name] = Optional[EntityText]
             attrs["__annotations__"] = annotations
-            
-            # 动态创建类
             entity_class = type(name, (EntityModel,), attrs)
             entity_class.__doc__ = description
             entity_types[name] = entity_class
-        
-        # 动态创建边类型
+
         edge_definitions = {}
         for edge_def in ontology.get("edge_types", []):
             name = edge_def["name"]
             description = edge_def.get("description", f"A {name} relationship.")
-            
-            # 创建属性字典和类型注解
             attrs = {"__doc__": description}
             annotations = {}
-            
             for attr_def in edge_def.get("attributes", []):
-                attr_name = safe_attr_name(attr_def["name"])  # 使用安全名称
+                attr_name = safe_attr_name(attr_def["name"])
                 attr_desc = attr_def.get("description", attr_name)
-                # Zep API 需要 Field 的 description，这是必需的
                 attrs[attr_name] = Field(description=attr_desc, default=None)
-                annotations[attr_name] = Optional[str]  # 边属性用str类型
-            
+                annotations[attr_name] = Optional[str]
             attrs["__annotations__"] = annotations
-            
-            # 动态创建类
             class_name = ''.join(word.capitalize() for word in name.split('_'))
             edge_class = type(class_name, (EdgeModel,), attrs)
             edge_class.__doc__ = description
-            
-            # 构建source_targets
             source_targets = []
             for st in edge_def.get("source_targets", []):
                 source_targets.append(
@@ -322,18 +358,10 @@ class GraphBuilderService:
                         target=st.get("target", "Entity")
                     )
                 )
-            
             if source_targets:
                 edge_definitions[name] = (edge_class, source_targets)
-        
-        # 调用Zep API设置本体
-        if entity_types or edge_definitions:
-            rate_limit()
-            self.client.graph.set_ontology(
-                graph_ids=[graph_id],
-                entities=entity_types if entity_types else None,
-                edges=edge_definitions if edge_definitions else None,
-            )
+
+        return entity_types, edge_definitions
     
     def add_text_batches(
         self,
@@ -345,22 +373,6 @@ class GraphBuilderService:
     ) -> List[str]:
         episode_uuids = []
         total_chunks = len(chunks)
-
-        if self.mode == 'local':
-            for i in range(0, total_chunks, batch_size):
-                batch_chunks = chunks[i:i + batch_size]
-                batch_num = i // batch_size + 1
-                total_batches = (total_chunks + batch_size - 1) // batch_size
-
-                if progress_callback:
-                    progress = (i + len(batch_chunks)) / total_chunks
-                    progress_callback(
-                        t('progress.sendingBatch', current=batch_num, total=total_batches, chunks=len(batch_chunks)),
-                        progress
-                    )
-
-                self.local.add_text_batches(graph_id, batch_chunks, ontology, progress_callback, batch_size)
-            return episode_uuids
 
         for i in range(0, total_chunks, batch_size):
             batch_chunks = chunks[i:i + batch_size]
@@ -374,31 +386,36 @@ class GraphBuilderService:
                     progress
                 )
 
-            from zep_cloud import EpisodeData
-            episodes = [
-                EpisodeData(data=chunk, type="text")
-                for chunk in batch_chunks
-            ]
+            if self.mode == 'local':
+                self.local.add_text_batches(graph_id, batch_chunks, ontology, progress_callback, batch_size)
+            else:
+                # Try Zep
+                from zep_cloud import EpisodeData
+                episodes = [
+                    EpisodeData(data=chunk, type="text")
+                    for chunk in batch_chunks
+                ]
 
-            try:
-                rate_limit()
-                batch_result = self.client.graph.add_batch(
-                    graph_id=graph_id,
-                    episodes=episodes
-                )
+                def _zep_add():
+                    rate_limit()
+                    return self.client.graph.add_batch(
+                        graph_id=graph_id,
+                        episodes=episodes
+                    )
 
-                if batch_result and isinstance(batch_result, list):
-                    for ep in batch_result:
-                        ep_uuid = getattr(ep, 'uuid_', None) or getattr(ep, 'uuid', None)
-                        if ep_uuid:
-                            episode_uuids.append(ep_uuid)
-
-                time.sleep(1)
-
-            except Exception as e:
-                if progress_callback:
-                    progress_callback(t('progress.batchFailed', batch=batch_num, error=str(e)), 0)
-                raise
+                try:
+                    batch_result = _zep_add()
+                    if batch_result and isinstance(batch_result, list):
+                        for ep in batch_result:
+                            ep_uuid = getattr(ep, 'uuid_', None) or getattr(ep, 'uuid', None)
+                            if ep_uuid:
+                                episode_uuids.append(ep_uuid)
+                    time.sleep(1)
+                except Exception as e:
+                    self.logger.warning(f"Zep add_batch batch {batch_num} gagal: {e}. Fallback ke local.")
+                    self._fallback_to_local = True
+                    self.mode = 'local'
+                    self.local.add_text_batches(graph_id, batch_chunks, ontology, progress_callback, batch_size)
 
         return episode_uuids
     
@@ -410,6 +427,11 @@ class GraphBuilderService:
     ):
         """等待所有 episode 处理完成（通过查询每个 episode 的 processed 状态）"""
         if not episode_uuids:
+            if progress_callback:
+                progress_callback(t('progress.noEpisodesWait'), 1.0)
+            return
+        
+        if not self.client or self.mode == 'local':
             if progress_callback:
                 progress_callback(t('progress.noEpisodesWait'), 1.0)
             return
@@ -461,34 +483,41 @@ class GraphBuilderService:
     
     def _get_graph_info(self, graph_id: str) -> GraphInfo:
         if self.mode == 'local':
-            graph = self.local.load(graph_id)
+            return self._get_local_graph_info(graph_id)
+
+        # Try Zep
+        try:
+            nodes = fetch_all_nodes(self.client, graph_id)
+            edges = fetch_all_edges(self.client, graph_id)
             entity_types = set()
-            for node in graph.get('nodes', []):
-                for label in node.get('labels', []):
-                    if label not in ["Entity", "Node"]:
-                        entity_types.add(label)
+            for node in nodes:
+                if node.labels:
+                    for label in node.labels:
+                        if label not in ["Entity", "Node"]:
+                            entity_types.add(label)
             return GraphInfo(
                 graph_id=graph_id,
-                node_count=graph.get('node_count', 0),
-                edge_count=graph.get('edge_count', 0),
+                node_count=len(nodes),
+                edge_count=len(edges),
                 entity_types=list(entity_types)
             )
+        except Exception as e:
+            self.logger.warning(f"Zep get_graph_info gagal: {e}. Fallback ke local.")
+            self._fallback_to_local = True
+            self.mode = 'local'
+            return self._get_local_graph_info(graph_id)
 
-        nodes = fetch_all_nodes(self.client, graph_id)
-
-        edges = fetch_all_edges(self.client, graph_id)
-
+    def _get_local_graph_info(self, graph_id: str) -> GraphInfo:
+        graph = self.local.load(graph_id)
         entity_types = set()
-        for node in nodes:
-            if node.labels:
-                for label in node.labels:
-                    if label not in ["Entity", "Node"]:
-                        entity_types.add(label)
-
+        for node in graph.get('nodes', []):
+            for label in node.get('labels', []):
+                if label not in ["Entity", "Node"]:
+                    entity_types.add(label)
         return GraphInfo(
             graph_id=graph_id,
-            node_count=len(nodes),
-            edge_count=len(edges),
+            node_count=graph.get('node_count', 0),
+            edge_count=graph.get('edge_count', 0),
             entity_types=list(entity_types)
         )
     
@@ -496,6 +525,15 @@ class GraphBuilderService:
         if self.mode == 'local':
             return self.local.get_graph_data(graph_id)
 
+        try:
+            return self._get_zep_graph_data(graph_id)
+        except Exception as e:
+            self.logger.warning(f"Zep get_graph_data gagal: {e}. Fallback ke local.")
+            self._fallback_to_local = True
+            self.mode = 'local'
+            return self.local.get_graph_data(graph_id)
+
+    def _get_zep_graph_data(self, graph_id: str) -> Dict[str, Any]:
         nodes = fetch_all_nodes(self.client, graph_id)
         edges = fetch_all_edges(self.client, graph_id)
 
@@ -564,8 +602,7 @@ class GraphBuilderService:
         }
     
     def delete_graph(self, graph_id: str):
+        self._try_zep("delete_graph", lambda: self.client.graph.delete(graph_id=graph_id))
         if self.mode == 'local':
             self.local.delete(graph_id)
-        else:
-            self.client.graph.delete(graph_id=graph_id)
 

@@ -58,7 +58,6 @@ def get_graph_entities(graph_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -91,7 +90,6 @@ def get_entity_detail(graph_id: str, entity_uuid: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -128,5 +126,4 @@ def get_entities_by_type(graph_id: str, entity_type: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500

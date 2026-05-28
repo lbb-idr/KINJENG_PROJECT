@@ -57,7 +57,6 @@ def get_simulation_profiles(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -163,7 +162,6 @@ def get_simulation_profiles_realtime(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -237,5 +235,4 @@ def generate_profiles():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500

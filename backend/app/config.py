@@ -38,6 +38,9 @@ class Config:
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '').strip() or None
     GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').strip() or None
 
+    # CORS配置
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:3000')
+
     @classmethod
     @property
     def LLM_PROVIDERS(cls):
@@ -109,6 +112,9 @@ class Config:
     REPORT_AGENT_MAX_REFLECTION_ROUNDS = int(os.environ.get('REPORT_AGENT_MAX_REFLECTION_ROUNDS', '2'))
     REPORT_AGENT_TEMPERATURE = float(os.environ.get('REPORT_AGENT_TEMPERATURE', '0.5'))
     
+    # CORS配置
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:3000')
+
     @classmethod
     def validate(cls) -> list[str]:
         errors: list[str] = []

@@ -472,16 +472,13 @@ const doStartSimulation = async () => {
     const params = {
       simulation_id: props.simulationId,
       platform: 'parallel',
-      force: true,  // 强制重新开始
-      enable_graph_memory_update: true  // 开启动态图谱更新
+      force: true
     }
     
     if (props.maxRounds) {
       params.max_rounds = props.maxRounds
       addLog(t('log.setMaxRounds', { rounds: props.maxRounds }))
     }
-    
-    addLog(t('log.graphMemoryUpdateEnabled'))
     
     const res = await startSimulation(params)
     
@@ -503,8 +500,9 @@ const doStartSimulation = async () => {
       emit('update-status', 'error')
     }
   } catch (err) {
-    startError.value = err.message
-    addLog(t('log.startException', { error: err.message }))
+    const backendMsg = err.response?.data?.error || err.message
+    startError.value = backendMsg
+    addLog(t('log.startException', { error: backendMsg }))
     emit('update-status', 'error')
   } finally {
     isStarting.value = false
@@ -778,19 +776,19 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
+  background: var(--bg-card);
   font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
   overflow: hidden;
 }
 
 /* --- Control Bar --- */
 .control-bar {
-  background: #FFF;
+  background: var(--bg-card);
   padding: 12px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid var(--border-color);
   z-index: 10;
   height: 64px;
 }
@@ -807,8 +805,8 @@ onUnmounted(() => {
   gap: 4px;
   padding: 6px 12px;
   border-radius: 4px;
-  background: #FAFAFA;
-  border: 1px solid #EAEAEA;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   opacity: 0.7;
   transition: all 0.3s;
   min-width: 140px;
@@ -818,13 +816,13 @@ onUnmounted(() => {
 
 .platform-status.active {
   opacity: 1;
-  border-color: #333;
-  background: #FFF;
+  border-color: var(--text-primary);
+  background: var(--bg-card);
 }
 
 .platform-status.completed {
   opacity: 1;
-  border-color: #1A936F;
+  border-color: var(--success);
   background: #F2FAF6;
 }
 
@@ -836,8 +834,8 @@ onUnmounted(() => {
   transform: translateX(-50%);
   margin-top: 8px;
   padding: 10px 14px;
-  background: #000;
-  color: #FFF;
+  background: var(--black);
+  color: var(--bg-card);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   opacity: 0;
@@ -867,7 +865,7 @@ onUnmounted(() => {
 .tooltip-title {
   font-size: 10px;
   font-weight: 600;
-  color: #999;
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -885,7 +883,7 @@ onUnmounted(() => {
   padding: 3px 8px;
   background: rgba(255, 255, 255, 0.15);
   border-radius: 2px;
-  color: #FFF;
+  color: var(--bg-card);
   letter-spacing: 0.03em;
 }
 
@@ -899,13 +897,13 @@ onUnmounted(() => {
 .platform-name {
   font-size: 11px;
   font-weight: 700;
-  color: #000;
+  color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.platform-status.twitter .platform-icon { color: #000; }
-.platform-status.reddit .platform-icon { color: #000; }
+.platform-status.twitter .platform-icon { color: var(--text-primary); }
+.platform-status.reddit .platform-icon { color: var(--text-primary); }
 
 .platform-stats {
   display: flex;
@@ -920,7 +918,7 @@ onUnmounted(() => {
 
 .stat-label {
   font-size: 8px;
-  color: #999;
+  color: var(--text-tertiary);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -929,18 +927,18 @@ onUnmounted(() => {
 .stat-value {
   font-size: 11px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .stat-total, .stat-unit {
   font-size: 9px;
-  color: #999;
+  color: var(--text-tertiary);
   font-weight: 400;
 }
 
 .status-badge {
   margin-left: auto;
-  color: #1A936F;
+  color: var(--success);
   display: flex;
   align-items: center;
 }
@@ -962,12 +960,12 @@ onUnmounted(() => {
 }
 
 .action-btn.primary {
-  background: #000;
-  color: #FFF;
+  background: var(--black);
+  color: var(--bg-card);
 }
 
 .action-btn.primary:hover:not(:disabled) {
-  background: #333;
+  background: var(--text-primary);
 }
 
 .action-btn:disabled {
@@ -980,7 +978,7 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   position: relative;
-  background: #FFF;
+  background: var(--bg-card);
 }
 
 /* Timeline Header */
@@ -990,7 +988,7 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(8px);
   padding: 12px 24px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid var(--border-color);
   z-index: 5;
   display: flex;
   justify-content: center;
@@ -1001,15 +999,15 @@ onUnmounted(() => {
   align-items: center;
   gap: 16px;
   font-size: 11px;
-  color: #666;
-  background: #F5F5F5;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
   padding: 4px 12px;
   border-radius: 20px;
 }
 
 .total-count {
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .platform-breakdown {
@@ -1024,15 +1022,15 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-.breakdown-divider { color: #DDD; }
-.breakdown-item.twitter { color: #000; }
-.breakdown-item.reddit { color: #000; }
+.breakdown-divider { color: var(--text-secondary); }
+.breakdown-item.twitter { color: var(--text-primary); }
+.breakdown-item.reddit { color: var(--text-primary); }
 
 /* --- Platform Tabs --- */
 .platform-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid var(--border-color, #333);
+  border-bottom: 1px solid var(--border-color, var(--text-primary));
   margin: 0 16px;
   padding: 0;
 }
@@ -1047,15 +1045,15 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary, var(--text-tertiary));
   cursor: pointer;
   transition: all 0.2s;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-.tab-btn:hover { color: var(--text-primary, #eee); }
+.tab-btn:hover { color: var(--text-primary, var(--border-color)); }
 .tab-btn.active {
-  color: var(--text-primary, #eee);
+  color: var(--text-primary, var(--border-color));
   border-bottom-color: var(--accent-primary, #FF6A33);
 }
 .tab-btn .tab-icon { opacity: 0.6; }
@@ -1065,18 +1063,18 @@ onUnmounted(() => {
   padding: 1px 6px;
   background: var(--bg-secondary, #1a1a1a);
   border-radius: 0;
-  color: var(--text-tertiary, #666);
+  color: var(--text-tertiary, var(--text-secondary));
 }
 .tab-btn.active .tab-count {
   background: var(--accent-primary, #FF6A33);
-  color: #fff;
+  color: var(--bg-card);
 }
 
 /* --- Threaded Reply Indent --- */
 .timeline-item.is-reply {
   margin-left: 32px;
   padding-left: 16px;
-  border-left: 2px solid var(--border-color, #333);
+  border-left: 2px solid var(--border-color, var(--text-primary));
   position: relative;
 }
 .timeline-item.is-reply::before {
@@ -1086,7 +1084,7 @@ onUnmounted(() => {
   left: -2px;
   width: 14px;
   height: 2px;
-  background: var(--border-color, #333);
+  background: var(--border-color, var(--text-primary));
 }
 .timeline-item.is-reply .timeline-marker .marker-dot {
   width: 6px;
@@ -1109,7 +1107,7 @@ onUnmounted(() => {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: #EAEAEA; /* Cleaner line */
+  background: var(--border-color); /* Cleaner line */
   transform: translateX(-50%);
 }
 
@@ -1127,8 +1125,8 @@ onUnmounted(() => {
   top: 24px;
   width: 10px;
   height: 10px;
-  background: #FFF;
-  border: 1px solid #CCC;
+  background: var(--bg-card);
+  border: 1px solid var(--text-tertiary);
   border-radius: 50%;
   transform: translateX(-50%);
   z-index: 2;
@@ -1140,30 +1138,30 @@ onUnmounted(() => {
 .marker-dot {
   width: 4px;
   height: 4px;
-  background: #CCC;
+  background: var(--text-tertiary);
   border-radius: 50%;
 }
 
-.timeline-item.twitter .marker-dot { background: #000; }
-.timeline-item.reddit .marker-dot { background: #000; }
-.timeline-item.twitter .timeline-marker { border-color: #000; }
-.timeline-item.reddit .timeline-marker { border-color: #000; }
+.timeline-item.twitter .marker-dot { background: var(--black); }
+.timeline-item.reddit .marker-dot { background: var(--black); }
+.timeline-item.twitter .timeline-marker { border-color: var(--text-primary); }
+.timeline-item.reddit .timeline-marker { border-color: var(--text-primary); }
 
 /* Card Layout */
 .timeline-card {
   width: calc(100% - 48px);
-  background: #FFF;
+  background: var(--bg-card);
   border-radius: 2px;
   padding: 16px 20px;
-  border: 1px solid #EAEAEA;
+  border: 1px solid var(--border-color);
   box-shadow: 0 2px 10px rgba(0,0,0,0.02);
   position: relative;
   transition: all 0.2s;
 }
 
 .timeline-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  border-color: #DDD;
+  box-shadow: 0 4px 12px var(--border-color);
+  border-color: var(--text-secondary);
 }
 
 /* Left side (Twitter) */
@@ -1193,7 +1191,7 @@ onUnmounted(() => {
   align-items: flex-start;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #F5F5F5;
+  border-bottom: 1px solid var(--bg-secondary);
 }
 
 .agent-info {
@@ -1205,8 +1203,8 @@ onUnmounted(() => {
 .avatar-placeholder {
   width: 24px;
   height: 24px;
-  background: #000;
-  color: #FFF;
+  background: var(--black);
+  color: var(--bg-card);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1219,7 +1217,7 @@ onUnmounted(() => {
 .agent-name {
   font-size: 13px;
   font-weight: 600;
-  color: #000;
+  color: var(--text-primary);
 }
 
 .header-meta {
@@ -1229,7 +1227,7 @@ onUnmounted(() => {
 }
 
 .platform-indicator {
-  color: #999;
+  color: var(--text-tertiary);
   display: flex;
   align-items: center;
 }
@@ -1245,33 +1243,33 @@ onUnmounted(() => {
 }
 
 /* Monochromatic Badges */
-.badge-post { background: #F0F0F0; color: #333; border-color: #E0E0E0; }
-.badge-comment { background: #F0F0F0; color: #666; border-color: #E0E0E0; }
-.badge-action { background: #FFF; color: #666; border: 1px solid #E0E0E0; }
-.badge-meta { background: #FAFAFA; color: #999; border: 1px dashed #DDD; }
+.badge-post { background: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-color); }
+.badge-comment { background: var(--bg-secondary); color: var(--text-secondary); border-color: var(--border-color); }
+.badge-action { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-color); }
+.badge-meta { background: var(--bg-secondary); color: var(--text-tertiary); border: 1px dashed var(--text-secondary); }
 .badge-idle { opacity: 0.5; }
 
 .content-text {
   font-size: 13px;
   line-height: 1.6;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 10px;
 }
 
 .content-text.main-text {
   font-size: 14px;
-  color: #000;
+  color: var(--text-primary);
 }
 
 /* Info Blocks (Quote, Repost, etc) */
 .quoted-block, .repost-content {
-  background: #F9F9F9;
-  border: 1px solid #EEE;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   padding: 10px 12px;
   border-radius: 2px;
   margin-top: 8px;
   font-size: 12px;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .quote-header, .repost-info, .like-info, .search-info, .follow-info, .vote-info, .idle-info, .comment-context {
@@ -1280,19 +1278,19 @@ onUnmounted(() => {
   gap: 6px;
   margin-bottom: 6px;
   font-size: 11px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .icon-small {
-  color: #999;
+  color: var(--text-tertiary);
 }
 .icon-small.filled {
-  color: #999; /* Keep icons neutral unless highlighted */
+  color: var(--text-tertiary); /* Keep icons neutral unless highlighted */
 }
 
 .search-query {
   font-family: 'JetBrains Mono', monospace;
-  background: #F0F0F0;
+  background: var(--bg-secondary);
   padding: 0 4px;
   border-radius: 2px;
 }
@@ -1302,7 +1300,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   font-size: 10px;
-  color: #BBB;
+  color: var(--text-tertiary);
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -1316,7 +1314,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  color: #CCC;
+  color: var(--text-tertiary);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -1326,13 +1324,13 @@ onUnmounted(() => {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid #EAEAEA;
+  border: 1px solid var(--border-color);
   animation: ripple 2s infinite;
 }
 
 @keyframes ripple {
-  0% { transform: scale(0.8); opacity: 1; border-color: #CCC; }
-  100% { transform: scale(2.5); opacity: 0; border-color: #EAEAEA; }
+  0% { transform: scale(0.8); opacity: 1; border-color: var(--text-tertiary); }
+  100% { transform: scale(2.5); opacity: 0; border-color: var(--border-color); }
 }
 
 /* Animation */
@@ -1352,8 +1350,8 @@ onUnmounted(() => {
 
 /* Logs */
 .system-logs {
-  background: #000;
-  color: #DDD;
+  background: var(--black);
+  color: var(--text-secondary);
   padding: 16px;
   font-family: 'JetBrains Mono', monospace;
   border-top: 1px solid #222;
@@ -1363,11 +1361,11 @@ onUnmounted(() => {
 .log-header {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--text-primary);
   padding-bottom: 8px;
   margin-bottom: 8px;
   font-size: 10px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .log-content {
@@ -1380,7 +1378,7 @@ onUnmounted(() => {
 }
 
 .log-content::-webkit-scrollbar { width: 4px; }
-.log-content::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+.log-content::-webkit-scrollbar-thumb { background: var(--text-primary); border-radius: 2px; }
 
 .log-line {
   font-size: 11px;
@@ -1389,8 +1387,8 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
-.log-time { color: #555; min-width: 75px; }
-.log-msg { color: #BBB; word-break: break-all; }
+.log-time { color: var(--text-secondary); min-width: 75px; }
+.log-msg { color: var(--text-tertiary); word-break: break-all; }
 .mono { font-family: 'JetBrains Mono', monospace; }
 
 /* Loading spinner for button */
@@ -1399,7 +1397,7 @@ onUnmounted(() => {
   width: 14px;
   height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #FFF;
+  border-top-color: var(--bg-card);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-right: 6px;

@@ -43,7 +43,7 @@ def create_app(config_class=Config):
         logger.info("=" * 50)
     
     # 启用CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, resources={r"/api/*": {"origins": Config.CORS_ORIGINS.split(",")}})
     
     # 初始化 DatabaseManager (SQLite)
     from .utils.database import DatabaseManager

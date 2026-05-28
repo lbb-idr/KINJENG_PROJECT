@@ -2,6 +2,8 @@ import json
 import os
 import uuid
 import time
+import hashlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Any, List, Optional
 
 from ..config import Config
@@ -11,6 +13,28 @@ from ..utils.logger import get_logger
 logger = get_logger('kinjeng.local_graph')
 
 GRAPHS_DIR = os.path.join(os.path.dirname(__file__), '../data/graphs')
+
+# Simple in-memory LLM response cache (LRU, max 256 entries)
+_llm_cache: Dict[str, Dict] = {}
+_MAX_CACHE = 256
+
+
+def _cache_key(prompt: str) -> str:
+    return hashlib.md5(prompt.encode()).hexdigest()
+
+
+def _get_cached(prompt: str) -> Optional[Dict]:
+    key = _cache_key(prompt)
+    return _llm_cache.get(key)
+
+
+def _set_cache(prompt: str, result: Dict):
+    key = _cache_key(prompt)
+    if len(_llm_cache) >= _MAX_CACHE:
+        # Remove oldest entry
+        oldest = next(iter(_llm_cache))
+        del _llm_cache[oldest]
+    _llm_cache[key] = result
 
 
 class LocalGraphStore:
@@ -65,63 +89,88 @@ class LocalGraphStore:
         seen_nodes = {}
         BATCH_SIZE = 5
 
-        for i in range(0, len(chunks), BATCH_SIZE):
-            batch = chunks[i:i+BATCH_SIZE]
-            # Label each chunk so LLM can reference them
+        def _process_batch(batch: List[str], batch_idx: int):
             labeled = "\n\n".join(
-                f"[Chunk {i+idx+1}]\n{chunk}" for idx, chunk in enumerate(batch)
+                f"[Chunk {batch_idx + idx + 1}]\n{chunk}" for idx, chunk in enumerate(batch)
             )
-            prompt = f"""Analyze all text chunks below and extract entities and relationships from ALL chunks as JSON.
+            prompt = f"""Extract entities and relationships from these text chunks as JSON.
 
 Allowed entity types: {json.dumps(entity_type_names)}
 Allowed relationship types: {json.dumps(edge_type_names)}
 
 Rules:
-- Each entity must have: name, type (from allowed types), summary (1 sentence)
-- Each relationship must have: source (entity name), target (entity name), type (from allowed types), fact (1 sentence describing the relationship)
-- Use ONLY the allowed entity and relationship types
-- If no entities found in a chunk, return empty arrays for that chunk's results
-- Deduplicate entities with the same name across chunks (only include once)
+- Entity: name, type (from allowed), summary (1 sentence max)
+- Relationship: source, target, type (from allowed), fact (1 sentence)
+- Use ONLY allowed types. Deduplicate entities with same name.
 
-Respond with JSON only:
-{{"entities": [{{"name": "...", "type": "...", "summary": "..."}}], "relationships": [{{"source": "...", "target": "...", "type": "...", "fact": "..."}}]}}
+JSON: {{"entities": [{{"name","type","summary"}}], "relationships": [{{"source","target","type","fact"}}]}}
 
-Text chunks:
+Chunks:
 {labeled}"""
 
+            cached = _get_cached(prompt)
+            if cached:
+                logger.info(f"Batch {batch_idx}: cache HIT")
+                return cached
+
             try:
-                result = llm.chat_json([{"role": "user", "content": prompt}])
-                for ent in result.get("entities", []):
-                    name = ent["name"].strip()
-                    if name not in seen_nodes:
-                        node_uuid = str(uuid.uuid4())
-                        seen_nodes[name] = node_uuid
-                        all_nodes.append({
-                            "uuid": node_uuid,
-                            "name": name,
-                            "labels": [ent.get("type", "Entity")],
-                            "summary": ent.get("summary", ""),
+                result = llm.chat_json(
+                    [{"role": "user", "content": prompt}],
+                    temperature=0.1,
+                    max_tokens=2048
+                )
+                _set_cache(prompt, result)
+                return result
+            except Exception as e:
+                logger.warning(f"LLM extraction failed for batch {batch_idx}: {e}")
+                return {"entities": [], "relationships": []}
+
+        batches = [chunks[i:i+BATCH_SIZE] for i in range(0, len(chunks), BATCH_SIZE)]
+        results = [None] * len(batches)
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            future_map = {
+                executor.submit(_process_batch, batch, i): i
+                for i, batch in enumerate(batches)
+            }
+            for future in as_completed(future_map):
+                i = future_map[future]
+                try:
+                    results[i] = future.result()
+                except Exception as e:
+                    logger.warning(f"Batch {i} unexpected error: {e}")
+                    results[i] = {"entities": [], "relationships": []}
+
+        for result in results:
+            for ent in result.get("entities", []):
+                name = ent["name"].strip()
+                if name not in seen_nodes:
+                    node_uuid = str(uuid.uuid4())
+                    seen_nodes[name] = node_uuid
+                    all_nodes.append({
+                        "uuid": node_uuid,
+                        "name": name,
+                        "labels": [ent.get("type", "Entity")],
+                        "summary": ent.get("summary", ""),
+                        "attributes": {},
+                        "created_at": time.time()
+                    })
+                for rel in result.get("relationships", []):
+                    src = rel["source"].strip()
+                    tgt = rel["target"].strip()
+                    if src in seen_nodes and tgt in seen_nodes:
+                        all_edges.append({
+                            "uuid": str(uuid.uuid4()),
+                            "name": rel.get("type", ""),
+                            "fact": rel.get("fact", ""),
+                            "fact_type": rel.get("type", ""),
+                            "source_node_uuid": seen_nodes[src],
+                            "target_node_uuid": seen_nodes[tgt],
+                            "source_node_name": src,
+                            "target_node_name": tgt,
                             "attributes": {},
                             "created_at": time.time()
                         })
-                    for rel in result.get("relationships", []):
-                        src = rel["source"].strip()
-                        tgt = rel["target"].strip()
-                        if src in seen_nodes and tgt in seen_nodes:
-                            all_edges.append({
-                                "uuid": str(uuid.uuid4()),
-                                "name": rel.get("type", ""),
-                                "fact": rel.get("fact", ""),
-                                "fact_type": rel.get("type", ""),
-                                "source_node_uuid": seen_nodes[src],
-                                "target_node_uuid": seen_nodes[tgt],
-                                "source_node_name": src,
-                                "target_node_name": tgt,
-                                "attributes": {},
-                                "created_at": time.time()
-                            })
-            except Exception as e:
-                logger.warning(f"LLM extraction failed for batch starting at chunk {i}: {e}")
 
         return all_nodes, all_edges
 

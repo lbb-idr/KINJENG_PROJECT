@@ -216,7 +216,6 @@ def start_simulation():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -275,7 +274,6 @@ def stop_simulation():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -358,7 +356,6 @@ def get_run_status(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -459,7 +456,6 @@ def get_run_status_detail(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -513,7 +509,6 @@ def get_simulation_actions(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -553,7 +548,6 @@ def get_simulation_timeline(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -580,7 +574,6 @@ def get_agent_stats(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -659,7 +652,6 @@ def get_simulation_posts(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -733,7 +725,6 @@ def get_simulation_comments(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -864,7 +855,6 @@ def interview_agent():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -1002,7 +992,6 @@ def interview_agents_batch():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -1105,7 +1094,6 @@ def interview_all_agents():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -1177,7 +1165,6 @@ def get_interview_history():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -1244,7 +1231,6 @@ def get_env_status():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -1314,7 +1300,6 @@ def close_simulation_env():
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
 
 
@@ -1357,5 +1342,4 @@ def delete_simulation(simulation_id: str):
         return jsonify({
             "success": False,
             "error": str(e),
-            "traceback": traceback.format_exc()
         }), 500
