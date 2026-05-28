@@ -1202,6 +1202,150 @@ async def seed_follow_graph(
         log.warning(f"[{platform_label}] Follow seeding failed (non-critical): {e}")
 
 
+# ===== D2: Reply Injection after seed posts =====
+async def _inject_reply_actions(
+    db_path: str,
+    agent_names: Dict[int, str],
+    all_agent_ids: List[int],
+    env,
+    action_logger,
+    platform_label: str,
+    config: Dict[str, Any],
+    log_info: Callable
+):
+    """After seed posts are published, inject REPLY_POST/CREATE_COMMENT for random agents."""
+    try:
+        if not os.path.exists(db_path):
+            log_info(f"[D2] DB not found at {db_path}, skipping reply injection")
+            return
+
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT post_id, user_id, content FROM post ORDER BY post_id ASC")
+        posts = cursor.fetchall()
+        conn.close()
+
+        if not posts:
+            log_info("[D2] No seed posts found, skipping reply injection")
+            return
+
+        # Pilih 5-8 random agents (bukan author dari seed posts)
+        author_ids = {p[1] for p in posts}
+        candidate_ids = [aid for aid in all_agent_ids if aid not in author_ids]
+        if not candidate_ids:
+            log_info("[D2] No candidate agents available for replies")
+            return
+
+        reply_count = min(random.randint(5, 8), len(candidate_ids), len(posts))
+        selected_agents = random.sample(candidate_ids, reply_count)
+        sim_ctx = config.get("simulation_requirement", "topik ini")[:80]
+
+        reply_templates = [
+            f"Menarik. Saya punya pandangan berbeda tentang {sim_ctx}.",
+            f"Setuju dengan poin ini. Perlu dikaji lebih dalam.",
+            f"Data pendukung untuk pernyataan ini perlu diverifikasi.",
+            f"Saya melihat dari sudut pandang yang agak berbeda.",
+            f"Pertanyaan bagus. Mari kita bahas implikasinya.",
+            f"Konteks {sim_ctx} memang kompleks, perlu diskusi lebih lanjut.",
+        ]
+
+        for i, agent_id in enumerate(selected_agents):
+            try:
+                post_id, author_id, post_content = posts[i % len(posts)]
+                agent = env.agent_graph.get_agent(agent_id)
+                content = reply_templates[i % len(reply_templates)]
+
+                if platform_label == "twitter":
+                    action_type = ActionType.REPLY_POST
+                    args = {"content": content, "post_id": post_id}
+                else:
+                    action_type = ActionType.CREATE_COMMENT
+                    args = {"content": content, "post_id": post_id}
+
+                action = ManualAction(action_type=action_type, action_args=args)
+                await env.step({agent: action})
+
+                agent_name = agent_names.get(agent_id, f"Agent_{agent_id}")
+                log_info(f"[D2] {platform_label}: {agent_name} → {action_type.name} on post #{post_id}")
+                if action_logger:
+                    action_logger.log_action(1, agent_id, agent_name, action_type.name, args)
+            except Exception as e:
+                log = logging.getLogger(__name__)
+                log.warning(f"[D2] Failed reply injection for agent {agent_id}: {e}")
+
+        log_info(f"[D2] {platform_label}: Injected {reply_count} reply actions")
+
+    except Exception as e:
+        log = logging.getLogger(__name__)
+        log.warning(f"[D2] Reply injection failed (non-critical): {e}")
+
+
+# ===== D3: Post-simulation Engagement Pass =====
+async def _inject_engagement_actions(
+    db_path: str,
+    agent_names: Dict[int, str],
+    all_agent_ids: List[int],
+    env,
+    action_logger,
+    platform_label: str,
+    log_info: Callable
+):
+    """After simulation rounds, inject LIKE/REPOST/DISLIKE actions on existing posts."""
+    try:
+        if not os.path.exists(db_path):
+            log_info(f"[D3] DB not found at {db_path}, skipping engagement pass")
+            return
+
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT post_id, user_id, content FROM post ORDER BY post_id")
+        posts = cursor.fetchall()
+        conn.close()
+
+        if not posts:
+            log_info("[D3] No posts found, skipping engagement pass")
+            return
+
+        total_engaged = 0
+        # Tentukan action types per platform
+        if platform_label == "twitter":
+            engagement_types = [ActionType.LIKE_POST, ActionType.REPOST]
+        else:
+            engagement_types = [ActionType.LIKE_POST, ActionType.DISLIKE_POST]
+
+        for post_id, author_id, content in posts:
+            # Pilih 3-5 random agents yang bukan author
+            candidates = [aid for aid in all_agent_ids if aid != author_id]
+            if not candidates:
+                continue
+            engage_count = min(random.randint(3, 5), len(candidates))
+            engage_agents = random.sample(candidates, engage_count)
+
+            for agent_id in engage_agents:
+                try:
+                    agent = env.agent_graph.get_agent(agent_id)
+                    action_type = random.choice(engagement_types)
+                    args = {"post_id": post_id}
+
+                    action = ManualAction(action_type=action_type, action_args=args)
+                    await env.step({agent: action})
+
+                    agent_name = agent_names.get(agent_id, f"Agent_{agent_id}")
+                    log_info(f"[D3] {platform_label}: {agent_name} → {action_type.name} on post #{post_id}")
+                    if action_logger:
+                        action_logger.log_action(999, agent_id, agent_name, action_type.name, args)
+                    total_engaged += 1
+                except Exception as e:
+                    log = logging.getLogger(__name__)
+                    log.warning(f"[D3] Failed engagement for agent {agent_id}: {e}")
+
+        log_info(f"[D3] {platform_label}: Total {total_engaged} engagement actions injected")
+
+    except Exception as e:
+        log = logging.getLogger(__name__)
+        log.warning(f"[D3] Engagement pass failed (non-critical): {e}")
+
+
 class PlatformSimulation:
     """平台模拟结果容器"""
     def __init__(self):
@@ -1333,6 +1477,19 @@ async def run_twitter_simulation(
         platform_label="twitter"
     )
     
+    # D2: Inject reply actions after seed posts
+    all_agent_ids = list(agent_names.keys())
+    await _inject_reply_actions(
+        db_path=db_path,
+        agent_names=agent_names,
+        all_agent_ids=all_agent_ids,
+        env=result.env,
+        action_logger=action_logger,
+        platform_label="twitter",
+        config=config,
+        log_info=log_info
+    )
+    
     # 主模拟循环
     time_config = config.get("time_config", {})
     total_hours = time_config.get("total_simulation_hours", 72)
@@ -1462,6 +1619,18 @@ async def run_twitter_simulation(
             log_info(f"Day {simulated_day}, {simulated_hour:02d}:00 - Round {round_num + 1}/{total_rounds} ({progress:.1f}%)")
     
     # 注意：不关闭环境，保留给Interview使用
+    
+    # D3: Post-simulation engagement pass
+    if total_actions > 0:
+        await _inject_engagement_actions(
+            db_path=db_path,
+            agent_names=agent_names,
+            all_agent_ids=list(agent_names.keys()),
+            env=result.env,
+            action_logger=action_logger,
+            platform_label="twitter",
+            log_info=log_info
+        )
     
     if action_logger:
         action_logger.log_simulation_end(total_rounds, total_actions)
@@ -1603,6 +1772,19 @@ async def run_reddit_simulation(
         platform_label="reddit"
     )
     
+    # D2: Inject reply actions after seed posts
+    all_agent_ids = list(agent_names.keys())
+    await _inject_reply_actions(
+        db_path=db_path,
+        agent_names=agent_names,
+        all_agent_ids=all_agent_ids,
+        env=result.env,
+        action_logger=action_logger,
+        platform_label="reddit",
+        config=config,
+        log_info=log_info
+    )
+    
     # 主模拟循环
     time_config = config.get("time_config", {})
     total_hours = time_config.get("total_simulation_hours", 72)
@@ -1732,6 +1914,18 @@ async def run_reddit_simulation(
             log_info(f"Day {simulated_day}, {simulated_hour:02d}:00 - Round {round_num + 1}/{total_rounds} ({progress:.1f}%)")
     
     # 注意：不关闭环境，保留给Interview使用
+    
+    # D3: Post-simulation engagement pass
+    if total_actions > 0:
+        await _inject_engagement_actions(
+            db_path=db_path,
+            agent_names=agent_names,
+            all_agent_ids=list(agent_names.keys()),
+            env=result.env,
+            action_logger=action_logger,
+            platform_label="reddit",
+            log_info=log_info
+        )
     
     if action_logger:
         action_logger.log_simulation_end(total_rounds, total_actions)
