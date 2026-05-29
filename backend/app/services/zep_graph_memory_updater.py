@@ -12,8 +12,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from queue import Queue, Empty
 
-from zep_cloud.client import Zep
-
 from ..config import Config
 from ..utils.logger import get_logger
 from ..utils.locale import get_locale, set_locale
@@ -249,7 +247,7 @@ class ZepGraphMemoryUpdater:
             if not self.api_key:
                 raise ValueError("ZEP_API_KEY未配置")
             
-            self.client = Zep(api_key=self.api_key)
+            from zep_cloud.client import Zep; self.client = Zep(api_key=self.api_key)
         
         # 活动队列
         self._activity_queue: Queue = Queue()
