@@ -189,7 +189,7 @@ class SubprocessMixin:
                                     state.reddit_simulated_hours = simulated_hours
 
                                 if round_num > state.current_round:
-                                    state.current_round = round_num
+                                    state.current_round = min(round_num, state.total_rounds)
                                 state.simulated_hours = max(
                                     state.twitter_simulated_hours, state.reddit_simulated_hours
                                 )
@@ -209,7 +209,7 @@ class SubprocessMixin:
                         state.add_action(action)
 
                         if action.round_num and action.round_num > state.current_round:
-                            state.current_round = action.round_num
+                            state.current_round = min(action.round_num, state.total_rounds)
 
                         if graph_updater:
                             graph_updater.add_activity_from_dict(action_data, platform)

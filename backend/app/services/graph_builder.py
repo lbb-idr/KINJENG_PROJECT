@@ -22,6 +22,11 @@ MODE_FILE = os.path.join(os.path.dirname(__file__), '../data/mode.json')
 
 
 def _get_graph_mode() -> str:
+    # Prioritaskan Config dari .env
+    from ..config import Config
+    if Config.GRAPH_MODE:
+        return Config.GRAPH_MODE
+    # Fallback ke mode.json (runtime switch)
     try:
         import json
         with open(MODE_FILE, 'r') as f:

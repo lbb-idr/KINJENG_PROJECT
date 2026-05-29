@@ -232,18 +232,24 @@ class ZepGraphMemoryUpdater:
     def __init__(self, graph_id: str, api_key: Optional[str] = None):
         """
         初始化更新器
-        
+         
         Args:
             graph_id: Zep图谱ID
             api_key: Zep API Key（可选，默认从配置读取）
         """
         self.graph_id = graph_id
-        self.api_key = api_key or Config.ZEP_API_KEY
         
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY未配置")
-        
-        self.client = Zep(api_key=self.api_key)
+        # Skip Zep initialization in local mode
+        if Config.GRAPH_MODE == 'local':
+            self.api_key = None
+            self.client = None
+        else:
+            self.api_key = api_key or Config.ZEP_API_KEY
+            
+            if not self.api_key:
+                raise ValueError("ZEP_API_KEY未配置")
+            
+            self.client = Zep(api_key=self.api_key)
         
         # 活动队列
         self._activity_queue: Queue = Queue()

@@ -249,21 +249,39 @@ def stop_simulation():
                 "error": t('api.requireSimulationId')
             }), 400
         
-        run_state = SimulationRunner.stop_simulation(simulation_id)
+        try:
+            run_state = SimulationRunner.stop_simulation(simulation_id)
+            runner_stopped = True
+        except ValueError as e:
+            # Stale state: state.json status=running but no OS process
+            # Handle gracefully — reset state instead of 400
+            logger.warning(f"Stale simulation state for {simulation_id}: {e}")
+            runner_stopped = False
         
         # 更新模拟状态
         manager = SimulationManager()
         state = manager.get_simulation(simulation_id)
         if state:
-            state.status = SimulationStatus.PAUSED
+            state.status = SimulationStatus.READY if not runner_stopped else SimulationStatus.PAUSED
             manager._save_simulation_state(state)
         
-        return jsonify({
-            "success": True,
-            "data": run_state.to_dict()
-        })
+        if runner_stopped:
+            return jsonify({
+                "success": True,
+                "data": run_state.to_dict()
+            })
+        else:
+            return jsonify({
+                "success": True,
+                "data": {
+                    "simulation_id": simulation_id,
+                    "runner_status": "stopped",
+                    "completed_at": None
+                }
+            })
         
     except ValueError as e:
+        # Still catch any unexpected ValueError from other code
         return jsonify({
             "success": False,
             "error": str(e)

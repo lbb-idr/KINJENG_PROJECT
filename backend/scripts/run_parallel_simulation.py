@@ -1288,7 +1288,8 @@ async def _inject_engagement_actions(
     env,
     action_logger,
     platform_label: str,
-    log_info: Callable
+    log_info: Callable,
+    total_rounds: int = 0
 ):
     """After simulation rounds, inject LIKE/REPOST/DISLIKE actions on existing posts."""
     try:
@@ -1333,7 +1334,7 @@ async def _inject_engagement_actions(
                     agent_name = agent_names.get(agent_id, f"Agent_{agent_id}")
                     log_info(f"[D3] {platform_label}: {agent_name} → {action_type.name} on post #{post_id}")
                     if action_logger:
-                        action_logger.log_action(999, agent_id, agent_name, action_type.name, args)
+                        action_logger.log_action(total_rounds, agent_id, agent_name, action_type.name, args)
                     total_engaged += 1
                 except Exception as e:
                     log = logging.getLogger(__name__)
@@ -1629,7 +1630,8 @@ async def run_twitter_simulation(
             env=result.env,
             action_logger=action_logger,
             platform_label="twitter",
-            log_info=log_info
+            log_info=log_info,
+            total_rounds=total_rounds
         )
     
     if action_logger:
@@ -1924,7 +1926,8 @@ async def run_reddit_simulation(
             env=result.env,
             action_logger=action_logger,
             platform_label="reddit",
-            log_info=log_info
+            log_info=log_info,
+            total_rounds=total_rounds
         )
     
     if action_logger:

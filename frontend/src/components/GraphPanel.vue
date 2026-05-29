@@ -331,16 +331,26 @@ let linkLabelBgRef = null
 let nodeCircles = null // ref to D3 node circles for highlighting
 
 const renderGraph = () => {
-  if (!graphSvg.value || !props.graphData) return
-  
-  // 停止之前的仿真
-  if (currentSimulation) {
-    currentSimulation.stop()
+  if (!graphSvg.value || !props.graphData) {
+    console.warn('[GraphPanel] renderGraph skipped — svg or graphData missing', { svg: !!graphSvg.value, data: !!props.graphData })
+    return
   }
   
   const container = graphContainer.value
   const width = container.clientWidth
   const height = container.clientHeight
+  
+  if (width === 0 || height === 0) {
+    console.warn('[GraphPanel] renderGraph skipped — container has zero dimensions, retrying...')
+    setTimeout(() => renderGraph(), 100)
+    return
+  }
+  
+  // 停止之前的仿真
+  if (currentSimulation) {
+    currentSimulation.stop()
+    currentSimulation = null
+  }
   
   const svg = d3.select(graphSvg.value)
     .attr('width', width)
@@ -352,7 +362,17 @@ const renderGraph = () => {
   const nodesData = props.graphData.nodes || []
   const edgesData = props.graphData.edges || []
   
-  if (nodesData.length === 0) return
+  console.log(`[GraphPanel] renderGraph: ${nodesData.length} nodes, ${edgesData.length} edges, ${width}x${height}`)
+  
+  if (nodesData.length === 0) {
+    svg.append('text')
+      .attr('x', width / 2).attr('y', height / 2)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#999')
+      .attr('font-size', '14px')
+      .text('Tidak ada node untuk ditampilkan')
+    return
+  }
 
   // Prep data
   const nodeMap = {}
@@ -793,8 +813,16 @@ const renderGraph = () => {
   })
 }
 
-watch(() => props.graphData, () => {
-  nextTick(renderGraph)
+watch(() => props.graphData, (newVal) => {
+  if (newVal) {
+    console.log('[GraphPanel] graphData updated', { nodes: newVal.nodes?.length, edges: newVal.edges?.length })
+    nextTick(() => {
+      renderGraph()
+      setTimeout(renderGraph, 300)
+    })
+  } else {
+    console.log('[GraphPanel] graphData cleared')
+  }
 }, { deep: true })
 
 // 监听边标签显示开关
@@ -822,6 +850,10 @@ const handleResize = () => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
+  // Render if graphData already available on mount
+  if (props.graphData) {
+    nextTick(renderGraph)
+  }
 })
 
 onUnmounted(() => {

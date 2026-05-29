@@ -400,19 +400,24 @@ class _ZepToolsBase:
 
     def __init__(self, api_key: Optional[str] = None, llm_client: Optional[LLMClient] = None,
                  nodes_data: Optional[List[Dict]] = None, edges_data: Optional[List[Dict]] = None):
-        self._nodes_data = nodes_data
-        self._edges_data = edges_data
+         self._nodes_data = nodes_data
+         self._edges_data = edges_data
 
-        if nodes_data is not None:
-            self.client = None
-            self.api_key = None
-        else:
-            self.api_key = api_key or Config.ZEP_API_KEY
-            if not self.api_key:
-                raise ValueError("ZEP_API_KEY 未配置")
-            self.client = Zep(api_key=self.api_key)
-        self._llm_client = llm_client
-        logger.info(t("console.zepToolsInitialized"))
+         if nodes_data is not None:
+             self.client = None
+             self.api_key = None
+         else:
+             # Skip Zep initialization in local mode
+             if Config.GRAPH_MODE == 'local':
+                 self.client = None
+                 self.api_key = None
+             else:
+                 self.api_key = api_key or Config.ZEP_API_KEY
+                 if not self.api_key:
+                     raise ValueError("ZEP_API_KEY 未配置")
+                 self.client = Zep(api_key=self.api_key)
+         self._llm_client = llm_client
+         logger.info(t("console.zepToolsInitialized"))
 
     @property
     def llm(self) -> LLMClient:
@@ -476,10 +481,10 @@ class ZepToolsService(_ZepToolsBase, EntitiesMixin, SearchMixin, InsightsMixin, 
 
 def create_tools_service(graph_id: str):
     """Factory: returns ZepToolsService with pre-loaded data for local mode."""
-    from .graph_builder import _get_graph_mode
+    from ..graph_builder import _get_graph_mode
     mode = _get_graph_mode()
     if mode == 'local':
-        from .local_graph_store import LocalGraphStore
+        from ..local_graph_store import LocalGraphStore
         store = LocalGraphStore()
         data = store.get_graph_data(graph_id)
         return ZepToolsService(

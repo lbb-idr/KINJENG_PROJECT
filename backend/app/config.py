@@ -33,8 +33,11 @@ class Config:
     
     # LLM配置（统一使用OpenAI格式）
     LLM_API_KEY = os.environ.get('LLM_API_KEY').strip() if os.environ.get('LLM_API_KEY') else None
-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'http://localhost:20128/v1')
+    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'apa')
+    NVIDIA_API_KEY = os.environ.get('NVIDIA_API_KEY', '').strip() or None
+    MIMO_API_KEY = os.environ.get('MIMO_API_KEY', '').strip() or None
+    MIMO_BASE_URL = os.environ.get('MIMO_BASE_URL', 'https://api.xiaomimimo.com/v1')
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '').strip() or None
     GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').strip() or None
 
@@ -46,10 +49,22 @@ class Config:
     def LLM_PROVIDERS(cls):
         return [
             {
-                'name': 'nvidia',
+                'name': '9router',
                 'api_key': cls.LLM_API_KEY,
                 'base_url': cls.LLM_BASE_URL,
                 'model': cls.LLM_MODEL_NAME,
+            },
+            {
+                'name': 'mimo',
+                'api_key': cls.MIMO_API_KEY,
+                'base_url': cls.MIMO_BASE_URL,
+                'model': 'mimo-v2-flash',
+            },
+            {
+                'name': 'nvidia',
+                'api_key': cls.NVIDIA_API_KEY,
+                'base_url': 'https://integrate.api.nvidia.com/v1',
+                'model': 'nvidia/llama-3.1-nemotron-70b-instruct',
             },
             {
                 'name': 'gemini',
@@ -115,9 +130,9 @@ class Config:
     @classmethod
     def validate(cls) -> list[str]:
         errors: list[str] = []
-        if not cls.LLM_API_KEY and not cls.GEMINI_API_KEY:
-            errors.append("Tidak ada LLM API key yang dikonfigurasi (LLM_API_KEY atau GEMINI_API_KEY)")
-        if not cls.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY 未配置")
+        if not any([cls.LLM_API_KEY, cls.NVIDIA_API_KEY, cls.MIMO_API_KEY, cls.GEMINI_API_KEY, cls.OPENAI_API_KEY]):
+            errors.append("Tidak ada LLM API key yang dikonfigurasi")
+        if cls.GRAPH_MODE == 'zep' and not cls.ZEP_API_KEY:
+            errors.append("GRAPH_MODE=zep membutuhkan ZEP_API_KEY")
         return errors
 

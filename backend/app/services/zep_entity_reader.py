@@ -98,15 +98,20 @@ class ZepEntityReader:
     def __init__(self, api_key: Optional[str] = None, nodes_data: Optional[List[Dict]] = None, edges_data: Optional[List[Dict]] = None):
         self._nodes_data = nodes_data
         self._edges_data = edges_data
-        
+
         if nodes_data is not None:
             self.client = None
             self.api_key = None
         else:
-            self.api_key = api_key or Config.ZEP_API_KEY
-            if not self.api_key:
-                raise ValueError("ZEP_API_KEY 未配置")
-            self.client = Zep(api_key=self.api_key)
+            # Skip Zep initialization in local mode
+            if Config.GRAPH_MODE == 'local':
+                self.client = None
+                self.api_key = None
+            else:
+                self.api_key = api_key or Config.ZEP_API_KEY
+                if not self.api_key:
+                    raise ValueError("ZEP_API_KEY 未配置")
+                self.client = Zep(api_key=self.api_key)
     
     def _call_with_retry(
         self, 

@@ -254,7 +254,7 @@ class SearchMixin:
         max_agents: int = 5,
         custom_questions: List[str] = None
     ) -> InterviewResult:
-        from .simulation_runner import SimulationRunner
+        from ..simulation_runner import SimulationRunner
 
         logger.info(t("console.interviewAgentsStart", requirement=interview_requirement[:50]))
 
