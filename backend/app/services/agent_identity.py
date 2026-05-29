@@ -278,11 +278,11 @@ class AgentIdentityEngine:
         for i, dim in enumerate([('E', 'I'), ('S', 'N'), ('T', 'F'), ('J', 'P')]):
             if len(mbti) > i:
                 letter = mbti[i]
+                attr_name = ['extroversion', 'sensing', 'thinking', 'judging'][i]
                 if letter == dim[0]:
-                    getattr(sig, ['extroversion', 'sensing', 'thinking', 'judging'][i])
-                    setattr(sig, ['extroversion', 'sensing', 'thinking', 'judging'][i], 1.0)
+                    setattr(sig, attr_name, 1.0)
                 elif letter == dim[1]:
-                    setattr(sig, ['extroversion', 'sensing', 'thinking', 'judging'][i], -1.0)
+                    setattr(sig, attr_name, -1.0)
         
         # 2. Cognitive style
         cognitive_style = profile_data.get('cognitive_style', 'Logis')

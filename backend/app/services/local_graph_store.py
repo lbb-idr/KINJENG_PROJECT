@@ -136,7 +136,7 @@ Chunks:
             for future in as_completed(future_map):
                 i = future_map[future]
                 try:
-                    results[i] = future.result()
+                    results[i] = future.result(timeout=60)
                 except Exception as e:
                     logger.warning(f"Batch {i} unexpected error: {e}")
                     results[i] = {"entities": [], "relationships": []}

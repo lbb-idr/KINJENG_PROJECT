@@ -16,6 +16,7 @@ Flow per question:
 import json
 import os
 import time
+import traceback
 import uuid
 from dataclasses import dataclass, field, asdict
 from typing import Dict, Any, List, Optional
@@ -207,7 +208,7 @@ class SurveyDebateService:
                 ], temperature=0.9, max_tokens=300)
                 content = response.strip()
             except Exception as e:
-                logger.warning(f"Agent {agent.get('name')} round {round_num} failed: {e}")
+                logger.error(f"Agent {agent.get('name')} round {round_num} failed: {e}\n{traceback.format_exc()}")
                 content = f"Maaf, saya belum bisa memberikan pendapat saat ini. LIKERT: {scale // 2 + 1}"
 
             session.posts.append(DebatePost(
@@ -254,7 +255,7 @@ class SurveyDebateService:
             ], temperature=0.5, max_tokens=500)
             result = response.strip()
         except Exception as e:
-            logger.warning(f"Chairperson failed: {e}")
+            logger.error(f"Chairperson failed: {e}\n{traceback.format_exc()}")
             result = f"LIKERT: {scale // 2 + 1}\nKESIMPULAN: Berdasarkan diskusi, skor netral dipilih."
 
         score = self._extract_likert(result, scale)
@@ -268,6 +269,11 @@ class SurveyDebateService:
     def _format_persona(self, agent: Dict[str, Any]) -> str:
         agent_id = str(agent.get('user_id', ''))
         identity_ctx = get_identity_context(agent_id)
+        if not identity_ctx and agent_id:
+            sig = get_signature(agent_id)
+            if sig is None:
+                build_agent_identity(agent_id, agent)
+                identity_ctx = get_identity_context(agent_id)
         return (
             f"Usia: {agent.get('age', '?')}, "
             f"Pekerjaan: {agent.get('profession', agent.get('occupation', '?'))}, "

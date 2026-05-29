@@ -111,9 +111,14 @@ class LLMClient:
         if response_format:
             kwargs["response_format"] = response_format
 
-        response = client.chat.completions.create(**kwargs)
+        response = client.chat.completions.create(timeout=30, **kwargs)
         content = response.choices[0].message.content
-        # 部分模型（如MiniMax M2.5）会在content中包含<think>思考内容，需要移除
+        if content is None:
+            finish_reason = response.choices[0].finish_reason
+            raise APIError(
+                message=f"Model returned null content (finish_reason={finish_reason})",
+                body={"finish_reason": finish_reason}
+            )
         content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
         return content
 

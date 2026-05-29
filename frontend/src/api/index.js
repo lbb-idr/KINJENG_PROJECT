@@ -40,13 +40,15 @@ service.interceptors.response.use(
   },
   error => {
     console.error('Response error:', error)
+
+    if (error.response?.data?.error) {
+      return Promise.reject(new Error(error.response.data.error))
+    }
     
-    // 处理超时
     if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
       console.error('Request timeout')
     }
     
-    // 处理网络错误
     if (error.message === 'Network Error') {
       console.error('Network error - please check your connection')
     }
