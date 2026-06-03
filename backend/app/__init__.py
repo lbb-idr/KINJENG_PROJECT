@@ -136,7 +136,12 @@ def create_app(config_class=Config):
         return MetricsCollector().get_metrics()
     
     # Serve frontend SPA (catch-all for non-API paths)
-    frontend_dir = os.path.join(app.root_path, '..', 'frontend')
+    # Try multiple possible locations (local dev vs Docker/Railway)
+    frontend_candidates = [
+        os.path.join(app.root_path, '..', '..', 'frontend', 'dist'),  # local dev
+        os.path.join(app.root_path, '..', 'frontend'),  # Docker/Railway
+    ]
+    frontend_dir = next((p for p in frontend_candidates if os.path.isdir(p)), frontend_candidates[0])
     
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')

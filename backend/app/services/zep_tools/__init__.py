@@ -413,7 +413,7 @@ class _ZepToolsBase:
                  self.api_key = api_key or Config.ZEP_API_KEY
                  if not self.api_key:
                      raise ValueError("ZEP_API_KEY 未配置")
-                  from zep_cloud.client import Zep; self.client = Zep(api_key=self.api_key)
+                 from zep_cloud.client import Zep; self.client = Zep(api_key=self.api_key)
          self._llm_client = llm_client
          logger.info(t("console.zepToolsInitialized"))
 
